@@ -15,14 +15,26 @@ UPDATE      = "u"
 RUN         = "r"
 PAUSE       = "p"
 GO          = "g"
-
+TOP_DOWN    = 1 
+DOWN_TOP    = -1
+LEFT_RIGHT  = 1
+RIGHT_LEFT  = -1
 
 # Global variables
-VSWidth = 0
-VSHeight = 0
-VSX = 0 
-VSY = 0
-VS = 0
+
+# VS = visual screen 
+vsWidth = 0
+vsHeight = 0
+vsX = 0 
+vsY = 0
+vs = 0
+# stimulus  start and end 
+stXStart = 0
+stYStart = 0
+stYEnd   = 0
+stXEnd   = 0
+stXOrientation = 1 # 1 left-to-rigth -1 right-to-left
+stYOrientation = 1 # 1 top-down -1 down-top
 canvas = 0
 screen = 0
 controlMode = "l" # l = location, s = size
@@ -41,15 +53,15 @@ APP_CONFIG_FILE = "appConfig.csv"
 STIMULUS_CONFIG = "StimulusConfig.csv"
 
 def printVirtualScreenData():
-    logging.debug("X="+str(VSX)+" Y="+str(VSY)+" Width="+str(VSWidth)+" Height="+str(VSHeight))
+    logging.debug("X="+str(vsX)+" Y="+str(vsY)+" Width="+str(vsWidth)+" Height="+str(vsHeight))
 
 def initApp():
-    global VSWidth,VSHeight,VSX,VSY,appConfig,stimulusList
+    global vsWidth,vsHeight,vsX,vsY,appConfig,stimulusList
     appConfig=loadCSV(APP_CONFIG_FILE)   
-    VSX = int(appConfig[0]["fishScreenStartX"])
-    VSY = int(appConfig[0]["fishScreenStartY"])
-    VSWidth = int(appConfig[0]["fishScreenWidth"])
-    VSHeight= int(appConfig[0]["fishScreenHeight"])
+    vsX = int(appConfig[0]["fishScreenStartX"])
+    vsY = int(appConfig[0]["fishScreenStartY"])
+    vsWidth = int(appConfig[0]["fishScreenWidth"])
+    vsHeight= int(appConfig[0]["fishScreenHeight"])
     printVirtualScreenData();
     stimulusList=loadCSV(STIMULUS_CONFIG)
 
@@ -61,32 +73,32 @@ def chagneVirtualScreenProperties(direction):
         direction ([String]): the event.keySym Up,Down,Left,Rigth
     """
     global x,y # for some reason PYLANCE required this 
-    global VSHeight,VSWidth,VSX,VSY
+    global vsHeight,vsWidth,vsX,vsY
     x=0
     y=0
 
     if controlMode == LOCATION:
         if direction.lower() == "up":
             y -= 1;
-            VSY -=1
+            vsY -=1
         elif direction.lower() == "down":
             y += 1;
-            VSY+=1
+            vsY+=1
         elif direction.lower() == "left":
             x -= 1;
-            VSX-=1
+            vsX-=1
         elif direction.lower() == "right":
             x += 1;
-            VSX+=1
+            vsX+=1
     elif controlMode == SIZE:
         if direction.lower() == "up":
-            VSHeight -= 1;
+            vsHeight -= 1;
         elif direction.lower() == "down":
-            VSHeight += 1;
+            vsHeight += 1;
         elif direction.lower() == "left":
-            VSWidth -= 1;
+            vsWidth -= 1;
         elif direction.lower() == "right":
-            VSWidth += 1;
+            vsWidth += 1;
 
 def calcGeometry(screen_width, screen_height):
     geometryStr = str(screen_width)+"x"+str(screen_height)+"+-10+0"
@@ -96,12 +108,12 @@ def processEvent(event):
     logging.debug(event)
     chagneVirtualScreenProperties(event.keysym)
     if controlMode == LOCATION:
-        canvas.move(VS,x,y)
+        canvas.move(vs,x,y)
     elif controlMode == SIZE:
-        x0, y0, x1, y1 = canvas.coords(VS)
-        x1 = x0 + VSWidth
-        y1 = y0 + VSHeight
-        canvas.coords(VS, x0, y0, x1, y1)
+        x0, y0, x1, y1 = canvas.coords(vs)
+        x1 = x0 + vsWidth
+        y1 = y0 + vsHeight
+        canvas.coords(vs, x0, y0, x1, y1)
         
     return
 
@@ -118,10 +130,10 @@ def updateConfig(event):
     """
     global appConfig
     logging.debug(event)
-    appConfig[0]["fishScreenStartX"]=VSX
-    appConfig[0]["fishScreenStartY"]=VSY
-    appConfig[0]["fishScreenWidth"]=VSWidth
-    appConfig[0]["fishScreenHeight"]=VSHeight
+    appConfig[0]["fishScreenStartX"]=vsX
+    appConfig[0]["fishScreenStartY"]=vsY
+    appConfig[0]["fishScreenWidth"]=vsWidth
+    appConfig[0]["fishScreenHeight"]=vsHeight
     writeCSV(APP_CONFIG_FILE,appConfig[0])
     printVirtualScreenData();
     logging.debug("Config file updates successfully")
@@ -145,47 +157,55 @@ def printHelp(event):
     print('<Right> - move right or extend virtual screen size ')
     print('u - to update app config with current virtual screen location')
     print("========== Controlling Stimulus generator ==========")
-    print('r - to update app config with current virtual screen location')
-    print('p - to update app config with current virtual screen location')
-    print('g - to update app config with current virtual screen location')
+    print('r - Run the stimuli, pressing r again will restart')
+    print('p - Pause the run')
  
-def initStimulus():
+def initStimuli():
     """called whenever a new run starts. all stimulus will run from the beginig. 
     """
     global repNo, stimulusListLoc
     repNo = 0
     stimulusListLoc = 0 
-    createShape(stimulusList[0])
+    initShape(stimulusList[0])
 
-def createShape(stimulus):
+def initShape(stimulus):
     """create the shape and set the x,y changed for each iteration
 
     Args:
         stimulus : 1 stimulus from the stimulusList
     """
-    global shape, xNorm, yNorm,speed
-    x0 = int(stimulus["startX"])
-    y0 = int(stimulus["startY"])
-    x1 = int(stimulus["endX"])
-    y1 = int(stimulus["endY"])
+    global shape, xNorm, yNorm,speed, stXEnd,stXStart,stYEnd,stYStart,stXOrientation,stYOrientation
+
+    # converting the shape location into the VirtualScreen space
+    # shape location is between 0-1000 and the actual virtualScreen width/height are different 
+    stXStart = int(stimulus["startX"])*vsWidth/1000
+    stYStart = int(stimulus["startY"])*vsHeight/1000
+    stXEnd = int(stimulus["endX"])*vsWidth/1000
+    stYEnd = int(stimulus["endY"])*vsHeight/1000
     speed = int(stimulus["speed"])
     # since x,y is between 0-999 but actual width,height are different we need to normalize steps
-    xNorm = VSWidth/1000
-    yNorm = VSHeight/1000
+    xNorm = vsWidth/1000
+    yNorm = vsHeight/1000
 
-    if x0 > x1:
+    stXOrientation = LEFT_RIGHT
+    stYOrientation = TOP_DOWN 
+    
+
+    if stXStart > stXEnd:
         xNorm=-xNorm
-    elif x1 == x0:
+        stXOrientation = RIGHT_LEFT
+    elif stXEnd == stXStart:
         xNorm = 0
 
-    if y0 > y1:
+    if stYStart > stYEnd:
         yNorm=-yNorm
-    elif y1 == y0:
+        stYOrientation = DOWN_TOP
+    elif stYEnd == stYStart:
         yNorm=0
 
-    # converting the relative shape location into the VirtualScreen space
-    cx0 = VSX + (x0*VSWidth)/1000
-    cy0 = VSY + (y0*VSHeight)/1000
+    
+    cx0 = vsX + stXStart
+    cy0 = vsY + stYStart
 
     shape = canvas.create_rectangle(trunc(cx0),
                                     trunc(cy0),
@@ -195,7 +215,7 @@ def createShape(stimulus):
 
     logging.info("Shape created")
 
-def runStimulus():
+def runStimuli():
     # Shape,ShapeWidth,ShapeHeight,StartX,StartY,EndX,EndY,Repetitions,speed      
     global shape, stimulusListLoc, repNo, stimulusList, repetitionNo, stimulusState, xNorm,yNorm, canvas, speed
 
@@ -204,7 +224,10 @@ def runStimulus():
     x0, y0, x1, y1 = canvas.coords(shape)
     #logging.info("moving shape to new location x="+str(x0)+" y="+str(y0))
     # This stimulus repitiion reached its end 
-    if x1 > VSX+VSWidth or y1 > VSY + VSHeight or x1<0 or y1<0: 
+    if  ((stXOrientation==LEFT_RIGHT and x1 > vsX + stXEnd) or
+        (stXOrientation==RIGHT_LEFT and x1 < vsX + stXEnd) or 
+        (stYOrientation==TOP_DOWN and y1 > vsY + stYEnd) or
+        (stYOrientation==DOWN_TOP and y1 < vsY + stYEnd)): 
         logging.info("repetition completed !")
         repNo += 1
         canvas.delete(shape)        
@@ -217,14 +240,14 @@ def runStimulus():
                 logging.info("All stimuli were executed ! ")
             else:
                 logging.info("Starting stimulus no="+str(stimulusListLoc+1))
-                createShape(stimulusList[stimulusListLoc]) #creating the shape for the next repitition 
-                canvas.after(speed,runStimulus)
+                initShape(stimulusList[stimulusListLoc]) #creating the shape for the next repitition 
+                canvas.after(speed,runStimuli)
         else:
             logging.info("Starting repetition no="+str(repNo+1))
-            createShape(stimulusList[stimulusListLoc]) #creating the shape for the next repitition 
-            canvas.after(speed,runStimulus)
+            initShape(stimulusList[stimulusListLoc]) #creating the shape for the next repitition 
+            canvas.after(speed,runStimuli)
     else:
-        canvas.after(speed,runStimulus)
+        canvas.after(speed,runStimuli)
 
 def manageStimulus(event):    
     global state, shape
@@ -233,12 +256,11 @@ def manageStimulus(event):
         state = PAUSE        
     elif event.keysym == RUN:
         state == RUN
-        initStimulus()        
-        runStimulus()
-        
+        initStimuli()        
+        runStimuli()        
  
 def main():
-    global VS,canvas,screen
+    global vs,canvas,screen
     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
     initApp()
 
@@ -253,7 +275,7 @@ def main():
     canvas.pack(fill=BOTH,expand=1)
     #rectangle = canvas.create_rectangle(10,10,100,20,fill = "blue")
     #rectangle2 = canvas.create_rectangle(100,100,150,40,fill = "red")
-    VS = canvas.create_rectangle(VSX,VSY,VSX+VSWidth,VSY+VSHeight,fill = "white") 
+    vs = canvas.create_rectangle(vsX,vsY,vsX+vsWidth,vsY+vsHeight,fill = "white") 
     screen.bind('<Up>', processEvent)
     screen.bind('<Down>', processEvent)
     screen.bind('<Left>',processEvent)
