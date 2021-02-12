@@ -3,8 +3,14 @@ import csv
 def loadCSV(csvFileName):
     with open(csvFileName, mode='r') as infile:
         reader = csv.DictReader(infile)
-        reasult=[]
+        result=[]
         for row in reader: 
-            reasult.append(row)
+            result.append(row)
         #print({rows[0]:rows[1] for rows in reader})
-        return reasult
+        return result
+
+def writeCSV(csvFileName,dict):
+    with open(csvFileName, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=dict.keys())
+        writer.writeheader()
+        writer.writerow(dict)

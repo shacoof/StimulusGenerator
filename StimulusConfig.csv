@@ -1,3 +1,4 @@
-Shape,ShapeWidth,ShapeHeight,StartX,StartY,EndX,EndY
-Rectangle,10,20,,,,
-Circle,10,,,,,
+shape,shapeWidth,shapeHeight,startX,startY,endX,endY,repetitions,speed
+Rectangle,10,10,10,10,500,500,2,2
+Rectangle,20,20,500,50,200,50,1,2
+Rectangle,20,20,50,500,50,600,3,2
