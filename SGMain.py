@@ -29,12 +29,18 @@ vsX = 0
 vsY = 0
 vs = 0
 # stimulus  start and end 
-stXStart = 0
-stYStart = 0
-stYEnd   = 0
-stXEnd   = 0
-stXOrientation = 1 # 1 left-to-rigth -1 right-to-left
-stYOrientation = 1 # 1 top-down -1 down-top
+stXStart        = 0
+stYStart        = 0
+stYEnd          = 0
+stXEnd          = 0
+stXOrientation  = 1 # 1 left-to-rigth -1 right-to-left
+stYOrientation  = 1 # 1 top-down -1 down-top
+startShapeRadius= 0
+endShapeRadius  = 0
+slowSpeed       = 0
+fastDuration    = 0
+slowDuration    = 0
+
 canvas = 0
 screen = 0
 controlMode = "l" # l = location, s = size
@@ -177,7 +183,7 @@ def initShape(stimulus):
     Args:
         stimulus : 1 stimulus from the stimulusList
     """
-    global shape, xNorm, yNorm,fastSpeed, stXEnd,stXStart,stYEnd,stYStart,stXOrientation,stYOrientation
+    global shape, xNorm, yNorm,fastSpeed, stXEnd,stXStart,stYEnd,stYStart,stXOrientation,stYOrientation,endShapeRadius,slowSpeed,fastDuration,slowDuration,startShapeRadius
 
     # converting the shape location into the VirtualScreen space
     # shape location is between 0-1000 and the actual virtualScreen width/height are different 
@@ -186,13 +192,18 @@ def initShape(stimulus):
     stXEnd = int(stimulus["endX"])*vsWidth/1000
     stYEnd = int(stimulus["endY"])*vsHeight/1000
     fastSpeed = int(stimulus["fastSpeed"])
+    startShapeRadius = int(stimulus["startShapeRadius"])
+    endShapeRadius = int(stimulus["endShapeRadius"])
+    slowSpeed = int(stimulus["slowSpeed"])
+    fastDuration = int(stimulus["fastDuration"])
+    slowDuration = int(stimulus["slowDuration"])
+    
     # since x,y is between 0-999 but actual width,height are different we need to normalize steps
     xNorm = vsWidth/1000
     yNorm = vsHeight/1000
 
     stXOrientation = LEFT_RIGHT
-    stYOrientation = TOP_DOWN 
-    
+    stYOrientation = TOP_DOWN     
 
     if stXStart > stXEnd:
         xNorm=-xNorm
@@ -205,7 +216,6 @@ def initShape(stimulus):
         stYOrientation = DOWN_TOP
     elif stYEnd == stYStart:
         yNorm=0
-
     
     cx0 = vsX + stXStart
     cy0 = vsY + stYStart
@@ -218,7 +228,7 @@ def initShape(stimulus):
     shape = _create_circle( canvas,
                             trunc(cx0),
                             trunc(cy0),
-                            trunc(int(stimulus["startShapeWidth"])),
+                            trunc(startShapeRadius),
                             fill = "black")
 
     logging.info("Shape created")

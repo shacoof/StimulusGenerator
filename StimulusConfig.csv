@@ -1,4 +1,4 @@
-shape,startShapeWidth,startShapeHeight,startX,startY,endX,endY,repetitions,fastSpeed,endShapeWidth,endShapeHeight,slowSpeed,fastDuration,slowDuration
+shape,startShapeWidth,startShapeRadius,startX,startY,endX,endY,repetitions,fastSpeed,endShapeWidth,endShapeRadius,slowSpeed,fastDuration,slowDuration
 Rectangle,10,10,10,10,500,500,1,3,10,10,5,5,2
 Rectangle,20,20,50,50,800,400,1,3,5,5,3,3,3
-Rectangle,4,4,800,800,10,60,1,3,10,10,10,2,
+Rectangle,4,4,800,800,10,60,1,3,10,10,10,2,3
