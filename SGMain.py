@@ -47,10 +47,13 @@ repNo = 0
 xNorm = 0 
 yNorm = 0 
 stimulusState = "New" # New - never run, 
-speed = 100
+fastSpeed = 100
 
 APP_CONFIG_FILE = "appConfig.csv"
 STIMULUS_CONFIG = "StimulusConfig.csv"
+
+def _create_circle(canvas, x, y, r, **kwargs):
+    return canvas.create_oval(x-r, y-r, x+r, y+r, **kwargs)
 
 def printVirtualScreenData():
     logging.debug("X="+str(vsX)+" Y="+str(vsY)+" Width="+str(vsWidth)+" Height="+str(vsHeight))
@@ -174,7 +177,7 @@ def initShape(stimulus):
     Args:
         stimulus : 1 stimulus from the stimulusList
     """
-    global shape, xNorm, yNorm,speed, stXEnd,stXStart,stYEnd,stYStart,stXOrientation,stYOrientation
+    global shape, xNorm, yNorm,fastSpeed, stXEnd,stXStart,stYEnd,stYStart,stXOrientation,stYOrientation
 
     # converting the shape location into the VirtualScreen space
     # shape location is between 0-1000 and the actual virtualScreen width/height are different 
@@ -182,7 +185,7 @@ def initShape(stimulus):
     stYStart = int(stimulus["startY"])*vsHeight/1000
     stXEnd = int(stimulus["endX"])*vsWidth/1000
     stYEnd = int(stimulus["endY"])*vsHeight/1000
-    speed = int(stimulus["speed"])
+    fastSpeed = int(stimulus["fastSpeed"])
     # since x,y is between 0-999 but actual width,height are different we need to normalize steps
     xNorm = vsWidth/1000
     yNorm = vsHeight/1000
@@ -207,17 +210,22 @@ def initShape(stimulus):
     cx0 = vsX + stXStart
     cy0 = vsY + stYStart
 
-    shape = canvas.create_rectangle(trunc(cx0),
-                                    trunc(cy0),
-                                    trunc(cx0+int(stimulus["shapeWidth"])),
-                                    trunc(cy0+int(stimulus["shapeHeight"])),
-                                    fill = "black")
+    #shape = canvas.create_rectangle(trunc(cx0),
+    #                                trunc(cy0),
+    #                                trunc(cx0+int(stimulus["startShapeWidth"])),
+    #                                trunc(cy0+int(stimulus["startShapeHeight"])),
+    #                                fill = "black")
+    shape = _create_circle( canvas,
+                            trunc(cx0),
+                            trunc(cy0),
+                            trunc(int(stimulus["startShapeWidth"])),
+                            fill = "black")
 
     logging.info("Shape created")
 
 def runStimuli():
-    # Shape,ShapeWidth,ShapeHeight,StartX,StartY,EndX,EndY,Repetitions,speed      
-    global shape, stimulusListLoc, repNo, stimulusList, repetitionNo, stimulusState, xNorm,yNorm, canvas, speed
+    # Shape,startShapeWidth,startShapeHeight,StartX,StartY,EndX,EndY,Repetitions,fastSpeed      
+    global shape, stimulusListLoc, repNo, stimulusList, repetitionNo, stimulusState, xNorm,yNorm, canvas, fastSpeed
 
     canvas.move(shape,xNorm,yNorm)
 
@@ -241,13 +249,13 @@ def runStimuli():
             else:
                 logging.info("Starting stimulus no="+str(stimulusListLoc+1))
                 initShape(stimulusList[stimulusListLoc]) #creating the shape for the next repitition 
-                canvas.after(speed,runStimuli)
+                canvas.after(fastSpeed,runStimuli)
         else:
             logging.info("Starting repetition no="+str(repNo+1))
             initShape(stimulusList[stimulusListLoc]) #creating the shape for the next repitition 
-            canvas.after(speed,runStimuli)
+            canvas.after(fastSpeed,runStimuli)
     else:
-        canvas.after(speed,runStimuli)
+        canvas.after(fastSpeed,runStimuli)
 
 def manageStimulus(event):    
     global state, shape
@@ -273,8 +281,6 @@ def main():
     screen.geometry(geometryStr)
     canvas = Canvas(screen,background="black")
     canvas.pack(fill=BOTH,expand=1)
-    #rectangle = canvas.create_rectangle(10,10,100,20,fill = "blue")
-    #rectangle2 = canvas.create_rectangle(100,100,150,40,fill = "red")
     vs = canvas.create_rectangle(vsX,vsY,vsX+vsWidth,vsY+vsHeight,fill = "white") 
     screen.bind('<Up>', processEvent)
     screen.bind('<Down>', processEvent)

@@ -12,7 +12,6 @@ supported keyboard actions
 
     r - run the simulation, pressing r again will restart the simulaiton from the begining 
     p - pause the simulation 
-    g - go - continue the simulaiton, resume - avaialble on after p is pressed 
 
     e - to exit
 
@@ -34,4 +33,5 @@ StartY : y=0 is the top-left corner of the fishScreen as defined in appConfig.cs
 EndX : 
 EndY :
 repetition 
-speed = milisecond, time waited before the stimulus is moved to the next x,y
+fastSpeed/slowSpeed = milisecond, time waited before the stimulus is moved to the next x,y
+fastDuration/slowDuration = how many cycles of fast/speed before switching to the other one
