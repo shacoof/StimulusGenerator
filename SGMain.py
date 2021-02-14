@@ -259,10 +259,10 @@ def runStimuli():
     x0, y0, x1, y1 = canvas.coords(shape)
     #logging.info("moving shape to new location x="+str(x0)+" y="+str(y0))
     # This stimulus repitiion reached its end 
-    if  ((stXOrientation==LEFT_RIGHT and x1 > vsX + stXEnd) or
-        (stXOrientation==RIGHT_LEFT and x1 < vsX + stXEnd) or 
-        (stYOrientation==TOP_DOWN and y1 > vsY + stYEnd) or
-        (stYOrientation==DOWN_TOP and y1 < vsY + stYEnd)): 
+    if  ((stXOrientation==LEFT_RIGHT and x1 > vsX + stXEnd+5) or
+        (stXOrientation==RIGHT_LEFT and x1 < vsX + stXEnd+5) or 
+        (stYOrientation==TOP_DOWN and y1 > vsY + stYEnd+5) or
+        (stYOrientation==DOWN_TOP and y1 < vsY + stYEnd+5)): 
         logging.info("repetition completed !")
         repNo += 1
         canvas.delete(shape)        
@@ -306,8 +306,6 @@ def showCrossAndBoundries(event):
         xMode = True
         xHorizental = canvas.create_line(vsX,(vsY+vsHeight)/2,(vsX+vsWidth),(vsY+vsHeight)/2,fill='black')        
         xVertical   = canvas.create_line((vsX+vsWidth)/2,vsY,(vsX+vsWidth)/2,vsY+vsHeight,fill='black')
-
-
  
 def main():
     global vs,canvas,screen, xBoundry
@@ -344,3 +342,11 @@ def main():
 
 if __name__ == "__main__": 
    main() 
+
+   
+   #ActionItem add reload of csv
+   #actionitem show/hide cross
+   #actionItem changing speed
+   #actionItem subsequent stimuli are running with delay>=0 with previous one , like power-point
+   #increase size linearly 
+   
