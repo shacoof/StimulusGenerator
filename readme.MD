@@ -17,7 +17,11 @@ supported keyboard actions
 
 
 appConfig.csv
-fishScreenStartX	fishScreenStartY	fishScreenWidth	fishScreenHeight
+fishScreenStartX
+fishScreenStartY
+fishScreenWidth
+fishScreenHeight
+f9CommunicationEnabled - if on then we try to communicate with a server running on the Stream-7 machine (needs to be up and running). Note that if the server is not running then the program will hangs as the communication is synchronous 
 
 stimulusConfig.csv
 The coordinates of the virtual screen are between 0-999. top left corenr is (0,0)

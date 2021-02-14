@@ -1,12 +1,14 @@
 
 # imports every file form tkinter and tkinter.ttk 
-from tkinter import *
+from tkinter import Canvas,mainloop,Tk,BOTH
 from tkinter import ttk
-from tkinter.ttk import *  
-from utils import *
+from tkinter.ttk import tkinter
+from utils import loadCSV,writeCSV,sendF9Marker
 import csv
 import logging
-from math import *
+from math import trunc
+import sys
+
 
 #constants 
 LOCATION    = "l"
@@ -54,6 +56,7 @@ xNorm = 0
 yNorm = 0 
 stimulusState = "New" # New - never run, 
 fastSpeed = 100
+f9CommunicationEnabled = False # ON or OFF. if On then send f9 communication
 
 APP_CONFIG_FILE = "appConfig.csv"
 STIMULUS_CONFIG = "StimulusConfig.csv"
@@ -65,13 +68,15 @@ def printVirtualScreenData():
     logging.debug("X="+str(vsX)+" Y="+str(vsY)+" Width="+str(vsWidth)+" Height="+str(vsHeight))
 
 def initApp():
-    global vsWidth,vsHeight,vsX,vsY,appConfig,stimulusList
+    global vsWidth,vsHeight,vsX,vsY,appConfig,stimulusList,f9CommunicationEnabled
     appConfig=loadCSV(APP_CONFIG_FILE)   
     vsX = int(appConfig[0]["fishScreenStartX"])
     vsY = int(appConfig[0]["fishScreenStartY"])
     vsWidth = int(appConfig[0]["fishScreenWidth"])
     vsHeight= int(appConfig[0]["fishScreenHeight"])
-    printVirtualScreenData();
+    if appConfig[0]["f9CommunicationEnabled"].lower() == "on" :
+        f9CommunicationEnabled = True
+    printVirtualScreenData()
     stimulusList=loadCSV(STIMULUS_CONFIG)
 
 def chagneVirtualScreenProperties(direction):
@@ -88,26 +93,26 @@ def chagneVirtualScreenProperties(direction):
 
     if controlMode == LOCATION:
         if direction.lower() == "up":
-            y -= 1;
+            y -= 1
             vsY -=1
         elif direction.lower() == "down":
-            y += 1;
+            y += 1
             vsY+=1
         elif direction.lower() == "left":
-            x -= 1;
+            x -= 1
             vsX-=1
         elif direction.lower() == "right":
-            x += 1;
+            x += 1
             vsX+=1
     elif controlMode == SIZE:
         if direction.lower() == "up":
-            vsHeight -= 1;
+            vsHeight -= 1
         elif direction.lower() == "down":
-            vsHeight += 1;
+            vsHeight += 1
         elif direction.lower() == "left":
-            vsWidth -= 1;
+            vsWidth -= 1
         elif direction.lower() == "right":
-            vsWidth += 1;
+            vsWidth += 1
 
 def calcGeometry(screen_width, screen_height):
     geometryStr = str(screen_width)+"x"+str(screen_height)+"+-10+0"
@@ -144,7 +149,7 @@ def updateConfig(event):
     appConfig[0]["fishScreenWidth"]=vsWidth
     appConfig[0]["fishScreenHeight"]=vsHeight
     writeCSV(APP_CONFIG_FILE,appConfig[0])
-    printVirtualScreenData();
+    printVirtualScreenData()
     logging.debug("Config file updates successfully")
 
 def leaveProg(event):
@@ -225,6 +230,11 @@ def initShape(stimulus):
     #                                trunc(cx0+int(stimulus["startShapeWidth"])),
     #                                trunc(cy0+int(stimulus["startShapeHeight"])),
     #                                fill = "black")
+
+    if  f9CommunicationEnabled.lower()=="on":
+        logging.info("sending f9 communication")
+        sendF9Marker()
+
     shape = _create_circle( canvas,
                             trunc(cx0),
                             trunc(cy0),
@@ -235,7 +245,7 @@ def initShape(stimulus):
 
 def runStimuli():
     # Shape,startShapeWidth,startShapeHeight,StartX,StartY,EndX,EndY,Repetitions,fastSpeed      
-    global shape, stimulusListLoc, repNo, stimulusList, repetitionNo, stimulusState, xNorm,yNorm, canvas, fastSpeed
+    global shape, stimulusListLoc, repNo, stimulusList, stimulusState, xNorm,yNorm, canvas, fastSpeed
 
     canvas.move(shape,xNorm,yNorm)
 
