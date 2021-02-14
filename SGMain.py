@@ -30,6 +30,7 @@ vsHeight = 0
 vsX = 0 
 vsY = 0
 vs = 0
+xBoundry = 0 
 # stimulus  start and end 
 stXStart        = 0
 stYStart        = 0
@@ -57,6 +58,9 @@ yNorm = 0
 stimulusState = "New" # New - never run, 
 fastSpeed = 100
 f9CommunicationEnabled = False # ON or OFF. if On then send f9 communication
+xMode = False # false - no x is displayed in the middle of the screen 
+xVertical = 0 
+xHorizental = 0 
 
 APP_CONFIG_FILE = "appConfig.csv"
 STIMULUS_CONFIG = "StimulusConfig.csv"
@@ -74,8 +78,9 @@ def initApp():
     vsY = int(appConfig[0]["fishScreenStartY"])
     vsWidth = int(appConfig[0]["fishScreenWidth"])
     vsHeight= int(appConfig[0]["fishScreenHeight"])
-    if appConfig[0]["f9CommunicationEnabled"].lower() == "on" :
+    if appConfig[0]["f9CommunicationEnabled"].lower() == "on" :        
         f9CommunicationEnabled = True
+    logging.info("f9CommunicationEnabled="+str(f9CommunicationEnabled))
     printVirtualScreenData()
     stimulusList=loadCSV(STIMULUS_CONFIG)
 
@@ -123,11 +128,13 @@ def processEvent(event):
     chagneVirtualScreenProperties(event.keysym)
     if controlMode == LOCATION:
         canvas.move(vs,x,y)
+        canvas.move(xBoundry,x,y)
     elif controlMode == SIZE:
         x0, y0, x1, y1 = canvas.coords(vs)
         x1 = x0 + vsWidth
         y1 = y0 + vsHeight
         canvas.coords(vs, x0, y0, x1, y1)
+        canvas.coords(xBoundry,x0-10,y0-10,x1+10,y1+10)
         
     return
 
@@ -231,7 +238,7 @@ def initShape(stimulus):
     #                                trunc(cy0+int(stimulus["startShapeHeight"])),
     #                                fill = "black")
 
-    if  f9CommunicationEnabled.lower()=="on":
+    if  f9CommunicationEnabled:
         logging.info("sending f9 communication")
         sendF9Marker()
 
@@ -287,8 +294,23 @@ def manageStimulus(event):
         initStimuli()        
         runStimuli()        
  
+def showCrossAndBoundries(event):
+    global xMode,xVertical,xHorizental
+    logging.debug(event)    
+
+    if xMode:
+        xMode = False
+        canvas.delete(xHorizental)
+        canvas.delete(xVertical)
+    else:
+        xMode = True
+        xHorizental = canvas.create_line(vsX,(vsY+vsHeight)/2,(vsX+vsWidth),(vsY+vsHeight)/2,fill='black')        
+        xVertical   = canvas.create_line((vsX+vsWidth)/2,vsY,(vsX+vsWidth)/2,vsY+vsHeight,fill='black')
+
+
+ 
 def main():
-    global vs,canvas,screen
+    global vs,canvas,screen, xBoundry
     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
     initApp()
 
@@ -301,6 +323,7 @@ def main():
     screen.geometry(geometryStr)
     canvas = Canvas(screen,background="black")
     canvas.pack(fill=BOTH,expand=1)
+    xBoundry = canvas.create_rectangle(vsX-10,vsY-10,vsX+vsWidth+10,vsY+vsHeight+10,fill = "yellow")
     vs = canvas.create_rectangle(vsX,vsY,vsX+vsWidth,vsY+vsHeight,fill = "white") 
     screen.bind('<Up>', processEvent)
     screen.bind('<Down>', processEvent)
@@ -313,6 +336,7 @@ def main():
     screen.bind('r',manageStimulus)
     screen.bind('p',manageStimulus)
     screen.bind('g',manageStimulus)
+    screen.bind('x',showCrossAndBoundries)
     screen.bind('?',printHelp)
     printHelp("")
 
