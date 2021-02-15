@@ -82,7 +82,6 @@ def initApp():
         f9CommunicationEnabled = True
     logging.info("f9CommunicationEnabled="+str(f9CommunicationEnabled))
     printVirtualScreenData()
-    stimulusList=loadCSV(STIMULUS_CONFIG)
 
 def chagneVirtualScreenProperties(direction):
     """
@@ -184,9 +183,10 @@ def printHelp(event):
 def initStimuli():
     """called whenever a new run starts. all stimulus will run from the beginig. 
     """
-    global repNo, stimulusListLoc
+    global repNo, stimulusListLoc,stimulusList
     repNo = 0
     stimulusListLoc = 0 
+    stimulusList=loadCSV(STIMULUS_CONFIG)
     initShape(stimulusList[0])
 
 def initShape(stimulus):
@@ -259,10 +259,10 @@ def runStimuli():
     x0, y0, x1, y1 = canvas.coords(shape)
     #logging.info("moving shape to new location x="+str(x0)+" y="+str(y0))
     # This stimulus repitiion reached its end 
-    if  ((stXOrientation==LEFT_RIGHT and x1 > vsX + stXEnd+5) or
-        (stXOrientation==RIGHT_LEFT and x1 < vsX + stXEnd+5) or 
-        (stYOrientation==TOP_DOWN and y1 > vsY + stYEnd+5) or
-        (stYOrientation==DOWN_TOP and y1 < vsY + stYEnd+5)): 
+    if  ((stXOrientation==LEFT_RIGHT and x1 > vsX + stXEnd+20) or
+        (stXOrientation==RIGHT_LEFT and x1 < vsX + stXEnd+20) or 
+        (stYOrientation==TOP_DOWN and y1 > vsY + stYEnd+20) or
+        (stYOrientation==DOWN_TOP and y1 < vsY + stYEnd+20)): 
         logging.info("repetition completed !")
         repNo += 1
         canvas.delete(shape)        
@@ -286,7 +286,8 @@ def runStimuli():
 
 def manageStimulus(event):    
     global state, shape
-    logging.debug(event)    
+    logging.debug(event)
+        
     if event.keysym == PAUSE:
         state = PAUSE        
     elif event.keysym == RUN:
