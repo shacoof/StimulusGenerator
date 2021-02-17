@@ -12,13 +12,16 @@ supported keyboard actions
 
     r - run the simulation, pressing r again will restart the simulaiton from the begining 
     p - pause the simulation 
-    g - go - continue the simulaiton, resume - avaialble on after p is pressed 
 
     e - to exit
 
 
 appConfig.csv
-fishScreenStartX	fishScreenStartY	fishScreenWidth	fishScreenHeight
+fishScreenStartX
+fishScreenStartY
+fishScreenWidth
+fishScreenHeight
+f9CommunicationEnabled - if on then we try to communicate with a server running on the Stream-7 machine (needs to be up and running). Note that if the server is not running then the program will hangs as the communication is synchronous 
 
 stimulusConfig.csv
 The coordinates of the virtual screen are between 0-999. top left corenr is (0,0)
@@ -34,4 +37,5 @@ StartY : y=0 is the top-left corner of the fishScreen as defined in appConfig.cs
 EndX : 
 EndY :
 repetition 
-speed = milisecond, time waited before the stimulus is moved to the next x,y
+fastSpeed/slowSpeed = milisecond, time waited before the stimulus is moved to the next x,y
+fastDuration/slowDuration = how many cycles of fast/speed before switching to the other one
