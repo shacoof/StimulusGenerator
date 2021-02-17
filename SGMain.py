@@ -21,6 +21,8 @@ TOP_DOWN    = 1
 DOWN_TOP    = -1
 LEFT_RIGHT  = 1
 RIGHT_LEFT  = -1
+LINE_WIDTH  = 10 
+FILL_COLOR  = "RED"
 
 # Global variables
 
@@ -252,7 +254,10 @@ def initShape(stimulus):
 
 def runStimuli():
     # Shape,startShapeWidth,startShapeHeight,StartX,StartY,EndX,EndY,Repetitions,fastSpeed      
-    global shape, stimulusListLoc, repNo, stimulusList, stimulusState, xNorm,yNorm, canvas, fastSpeed
+    global shape, stimulusListLoc, repNo, stimulusList, stimulusState, xNorm,yNorm, canvas, fastSpeed,state
+
+    if state == PAUSE:
+        return
 
     canvas.move(shape,xNorm,yNorm)
 
@@ -285,28 +290,32 @@ def runStimuli():
         canvas.after(fastSpeed,runStimuli)
 
 def manageStimulus(event):    
-    global state, shape
+    global state, shape, canvas
     logging.debug(event)
         
     if event.keysym == PAUSE:
-        state = PAUSE        
+        state = PAUSE     
+        canvas.delete(shape)
     elif event.keysym == RUN:
-        state == RUN
+        state = RUN
         initStimuli()        
         runStimuli()        
  
 def showCrossAndBoundries(event):
-    global xMode,xVertical,xHorizental
+    global xMode,xVertical,xHorizental, canvas,xBoundry
     logging.debug(event)    
 
     if xMode:
         xMode = False
         canvas.delete(xHorizental)
         canvas.delete(xVertical)
+        canvas.delete(xBoundry)
     else:
         xMode = True
-        xHorizental = canvas.create_line(vsX,(vsY+vsHeight)/2,(vsX+vsWidth),(vsY+vsHeight)/2,fill='black')        
-        xVertical   = canvas.create_line((vsX+vsWidth)/2,vsY,(vsX+vsWidth)/2,vsY+vsHeight,fill='black')
+        xBoundry    = canvas.create_rectangle(vsX-10,vsY-10,vsX+vsWidth+10,vsY+vsHeight+10,fill = FILL_COLOR)
+        xHorizental = canvas.create_line(vsX,vsY+vsHeight/2,vsX+vsWidth,vsY+vsHeight/2,fill=FILL_COLOR,width= LINE_WIDTH)        
+        xVertical   = canvas.create_line(vsX+vsWidth/2,vsY,vsX+vsWidth/2,vsY+vsHeight,fill=FILL_COLOR,width= LINE_WIDTH)
+        canvas.tag_lower(xBoundry)
  
 def main():
     global vs,canvas,screen, xBoundry
@@ -321,8 +330,7 @@ def main():
     geometryStr = calcGeometry(screen_width, screen_height)
     screen.geometry(geometryStr)
     canvas = Canvas(screen,background="black")
-    canvas.pack(fill=BOTH,expand=1)
-    xBoundry = canvas.create_rectangle(vsX-10,vsY-10,vsX+vsWidth+10,vsY+vsHeight+10,fill = "yellow")
+    canvas.pack(fill=BOTH,expand=1)    
     vs = canvas.create_rectangle(vsX,vsY,vsX+vsWidth,vsY+vsHeight,fill = "white") 
     screen.bind('<Up>', processEvent)
     screen.bind('<Down>', processEvent)
@@ -334,7 +342,6 @@ def main():
     screen.bind('e',leaveProg)
     screen.bind('r',manageStimulus)
     screen.bind('p',manageStimulus)
-    screen.bind('g',manageStimulus)
     screen.bind('x',showCrossAndBoundries)
     screen.bind('?',printHelp)
     printHelp("")
@@ -345,9 +352,10 @@ if __name__ == "__main__":
    main() 
 
    
-   #ActionItem add reload of csv
-   #actionitem show/hide cross
-   #actionItem changing speed
-   #actionItem subsequent stimuli are running with delay>=0 with previous one , like power-point
-   #increase size linearly 
+   #ActionItem add reload of csv DONE
+   #ActionItem show/hide cross DONE
+   #ActionItem changing speed 
+   #ActionItem subsequent stimuli are running with delay>=0 with previous one , like power-point
+   #ActionItem ncrease size linearly 
+   #ActionItem add a label at the top with current stimulus info
    

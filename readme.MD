@@ -10,7 +10,7 @@ supported keyboard actions
     <Right> - move right or extend virtual screen size 
     u - to update app config with current virtual screen location
 
-    r - run the simulation, pressing r again will restart the simulaiton from the begining 
+    r - run the simulation, pressing r again will restart the simulaiton from the begining and reload the latest version of the CSV
     p - pause the simulation 
 
     e - to exit
