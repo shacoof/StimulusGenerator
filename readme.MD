@@ -37,5 +37,10 @@ StartY : y=0 is the top-left corner of the fishScreen as defined in appConfig.cs
 EndX : 
 EndY :
 repetition 
-fastSpeed/slowSpeed = milisecond, time waited before the stimulus is moved to the next x,y
+fastSpeed/slowSpeed = step per milisecond, each step the shape is moved (screen_width/1000)/speed. Note : if screen_width < 1000 then movement will happen once every few miliseconds, e.g. 
+    screen_width = 250 and speed = 1 means that every 4 milisecond the shape will move 1 pixel
+    screen_widht = 250 and speed = 2 means that every 8 miliseconds the shape will move 1 pixel
+    speed = 1 the fastest
 fastDuration/slowDuration = how many cycles of fast/speed before switching to the other one
+startMode = can be AFTER or WITH. a stimulus starts AFTER the previous one completed or WITH the previous one. in both cases delay (ms) can be applied
+delay = see startMode

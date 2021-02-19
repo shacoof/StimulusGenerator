@@ -2,6 +2,7 @@
 # imports every file form tkinter and tkinter.ttk 
 from tkinter import Canvas,mainloop,Tk,BOTH
 from tkinter import ttk
+from tkinter.constants import MOVETO
 from tkinter.ttk import tkinter
 from utils import loadCSV,writeCSV,sendF9Marker
 import csv
@@ -23,6 +24,14 @@ LEFT_RIGHT  = 1
 RIGHT_LEFT  = -1
 LINE_WIDTH  = 10 
 FILL_COLOR  = "RED"
+FAST = 1
+SLOW = 2
+SLEEP_TIME = 1 # 1 ms
+MOVE = 1
+SLEEP = 0 
+AFTER = "after"
+WITH = "with"
+
 
 # Global variables
 
@@ -45,6 +54,13 @@ endShapeRadius  = 0
 slowSpeed       = 0
 fastDuration    = 0
 slowDuration    = 0
+timeInSpeed     = 0 
+speed           = 0 
+speedMode       = FAST # FAST or SLOW
+sleepTime       = 0 
+startMode       = AFTER # AFTER or WITH
+delay           = 0 
+
 
 canvas = 0
 screen = 0
@@ -60,9 +76,12 @@ yNorm = 0
 stimulusState = "New" # New - never run, 
 fastSpeed = 100
 f9CommunicationEnabled = False # ON or OFF. if On then send f9 communication
-xMode = False # false - no x is displayed in the middle of the screen 
-xVertical = 0 
-xHorizental = 0 
+xMode           = False # false - no x is displayed in the middle of the screen 
+xVertical       = 0 
+xHorizental     = 0 
+bgColor         = 0
+vsColor          = 0
+stimulusColor   = 0
 
 APP_CONFIG_FILE = "appConfig.csv"
 STIMULUS_CONFIG = "StimulusConfig.csv"
@@ -74,16 +93,36 @@ def printVirtualScreenData():
     logging.debug("X="+str(vsX)+" Y="+str(vsY)+" Width="+str(vsWidth)+" Height="+str(vsHeight))
 
 def initApp():
-    global vsWidth,vsHeight,vsX,vsY,appConfig,stimulusList,f9CommunicationEnabled
-    appConfig=loadCSV(APP_CONFIG_FILE)   
-    vsX = int(appConfig[0]["fishScreenStartX"])
-    vsY = int(appConfig[0]["fishScreenStartY"])
-    vsWidth = int(appConfig[0]["fishScreenWidth"])
-    vsHeight= int(appConfig[0]["fishScreenHeight"])
-    if appConfig[0]["f9CommunicationEnabled"].lower() == "on" :        
+    global vsWidth,vsHeight,vsX,vsY,appConfig,stimulusList,f9CommunicationEnabled,bgColor,vsColor,stimulusColor
+    appConfig   = loadCSV(APP_CONFIG_FILE)   
+    vsX         = getAppConfig("fishScreenStartX")
+    vsY         = getAppConfig("fishScreenStartY")
+    vsWidth     = getAppConfig("fishScreenWidth")
+    vsHeight    = getAppConfig("fishScreenHeight")
+    bgColor     = getAppConfig("backgroundColor","str")
+    vsColor     = getAppConfig("virtualScreenColor","str")
+    stimulusColor  = getAppConfig("stimulusColor","str")
+    f9CommunicationEnabled = getAppConfig("f9CommunicationEnabled","str")
+    if f9CommunicationEnabled.lower() == "on" :        
         f9CommunicationEnabled = True
+    else :
+        f9CommunicationEnabled = False
     logging.info("f9CommunicationEnabled="+str(f9CommunicationEnabled))
     printVirtualScreenData()
+
+def getAppConfig(variableName, type="int"):
+    """get appConfig value
+
+    Args:
+        variableName ([string]): [the name of the variable]
+        type ([type]): [int or str]
+    """
+
+    ret = appConfig[0][variableName]
+    if type=="int":
+        return(int(ret))
+    else:
+        return (ret)   
 
 def chagneVirtualScreenProperties(direction):
     """
@@ -197,21 +236,28 @@ def initShape(stimulus):
     Args:
         stimulus : 1 stimulus from the stimulusList
     """
-    global shape, xNorm, yNorm,fastSpeed, stXEnd,stXStart,stYEnd,stYStart,stXOrientation,stYOrientation,endShapeRadius,slowSpeed,fastDuration,slowDuration,startShapeRadius
+    global shape, xNorm, yNorm,fastSpeed, stXEnd,stXStart,stYEnd,stYStart
+    global stXOrientation,stYOrientation,endShapeRadius,startMode,delay
+    global slowSpeed,fastDuration,slowDuration,startShapeRadius,speed, timeInSpeed,sleepTime
 
     # converting the shape location into the VirtualScreen space
     # shape location is between 0-1000 and the actual virtualScreen width/height are different 
-    stXStart = int(stimulus["startX"])*vsWidth/1000
-    stYStart = int(stimulus["startY"])*vsHeight/1000
-    stXEnd = int(stimulus["endX"])*vsWidth/1000
-    stYEnd = int(stimulus["endY"])*vsHeight/1000
-    fastSpeed = int(stimulus["fastSpeed"])
+    stXStart        = int(stimulus["startX"])*vsWidth/1000
+    stYStart        = int(stimulus["startY"])*vsHeight/1000
+    stXEnd          = int(stimulus["endX"])*vsWidth/1000
+    stYEnd          = int(stimulus["endY"])*vsHeight/1000
+    fastSpeed       = int(stimulus["fastSpeed"])
     startShapeRadius = int(stimulus["startShapeRadius"])
-    endShapeRadius = int(stimulus["endShapeRadius"])
-    slowSpeed = int(stimulus["slowSpeed"])
-    fastDuration = int(stimulus["fastDuration"])
-    slowDuration = int(stimulus["slowDuration"])
-    
+    endShapeRadius  = int(stimulus["endShapeRadius"])
+    slowSpeed       = int(stimulus["slowSpeed"])
+    fastDuration    = int(stimulus["fastDuration"])
+    slowDuration    = int(stimulus["slowDuration"])
+    startMode       = stimulus["startMode"]
+    delay           = int(stimulus["delay"])
+    speed = fastSpeed
+    timeInSpeed = 0 
+    sleepTime = 0
+
     # since x,y is between 0-999 but actual width,height are different we need to normalize steps
     xNorm = vsWidth/1000
     yNorm = vsHeight/1000
@@ -248,9 +294,41 @@ def initShape(stimulus):
                             trunc(cx0),
                             trunc(cy0),
                             trunc(startShapeRadius),
-                            fill = "black")
+                            fill = stimulusColor)
 
     logging.info("Shape created")
+
+def calcMove():
+    """
+        every cycle is 1 milisecond
+        every cycle the program wakes up and decide what to do 
+            - if sleepTime == speed then move otherwise slepp for another milisecond
+            - if timeInSpeed == fastDuration then chagne to slow mode (and vice versa)
+                - timeInSpeed = 0
+                - speed = fast/slow speed (as needed)
+
+        speedMode = FAST or SLOW
+
+    """
+    global speed, timeInSpeed, speedMode,sleepTime,shape,xNorm,yNorm
+    if sleepTime == speed:
+        canvas.move(shape,xNorm,yNorm)
+        sleepTime = 0
+    else:
+        sleepTime +=1
+
+    if speedMode==FAST and timeInSpeed == fastDuration:
+        timeInSpeed = 0
+        speed       = slowSpeed
+        speedMode   = SLOW
+        sleepTime   = 0
+    elif speedMode==SLOW and timeInSpeed == slowDuration:
+        timeInSpeed = 0
+        speed       = fastSpeed
+        speedMode   = FAST
+        sleepTime   = 0
+    else :
+        timeInSpeed +=1
 
 def runStimuli():
     # Shape,startShapeWidth,startShapeHeight,StartX,StartY,EndX,EndY,Repetitions,fastSpeed      
@@ -259,7 +337,7 @@ def runStimuli():
     if state == PAUSE:
         return
 
-    canvas.move(shape,xNorm,yNorm)
+    calcMove() # decide whether it's time to move and in what speed 
 
     x0, y0, x1, y1 = canvas.coords(shape)
     #logging.info("moving shape to new location x="+str(x0)+" y="+str(y0))
@@ -281,13 +359,13 @@ def runStimuli():
             else:
                 logging.info("Starting stimulus no="+str(stimulusListLoc+1))
                 initShape(stimulusList[stimulusListLoc]) #creating the shape for the next repitition 
-                canvas.after(fastSpeed,runStimuli)
+                canvas.after(SLEEP_TIME,runStimuli)
         else:
             logging.info("Starting repetition no="+str(repNo+1))
             initShape(stimulusList[stimulusListLoc]) #creating the shape for the next repitition 
-            canvas.after(fastSpeed,runStimuli)
+            canvas.after(SLEEP_TIME,runStimuli)
     else:
-        canvas.after(fastSpeed,runStimuli)
+        canvas.after(SLEEP_TIME,runStimuli)
 
 def manageStimulus(event):    
     global state, shape, canvas
@@ -331,7 +409,7 @@ def main():
     screen.geometry(geometryStr)
     canvas = Canvas(screen,background="black")
     canvas.pack(fill=BOTH,expand=1)    
-    vs = canvas.create_rectangle(vsX,vsY,vsX+vsWidth,vsY+vsHeight,fill = "white") 
+    vs = canvas.create_rectangle(vsX,vsY,vsX+vsWidth,vsY+vsHeight,fill = vsColor) 
     screen.bind('<Up>', processEvent)
     screen.bind('<Down>', processEvent)
     screen.bind('<Left>',processEvent)
@@ -354,8 +432,8 @@ if __name__ == "__main__":
    
    #ActionItem add reload of csv DONE
    #ActionItem show/hide cross DONE
-   #ActionItem changing speed 
+   #ActionItem changing speed Done
    #ActionItem subsequent stimuli are running with delay>=0 with previous one , like power-point
-   #ActionItem ncrease size linearly 
+   #ActionItem increase size linearly 
    #ActionItem add a label at the top with current stimulus info
    
