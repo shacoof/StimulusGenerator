@@ -2,29 +2,19 @@ from utils import loadCSV,writeCSV,sendF9Marker
 import logging
 from math import trunc
 from Stimulus import *
-
-
 class StimulusGenerator:
     STIMULUS_CONFIG = "StimulusConfig.csv"
     AFTER = "after"
     WITH = "with"
 
-
-    stimulusObjList = []
-    stimulusObjListLoc = 0 
-    canvas = 0 
-    app = 0 
-    contextSet = False
-    stimulusStatus = Stimulus.WAITING   # waiting, running, done
-    batchNo = 0     # all the stimulus that are part of the batch, the primary stimulus and all other WITH stimuli
-
     def __init__ (self,canvas,app):
+        self.batchNo = 0
         self.canvas = canvas
         self.app = app
+        self.stimulusObjList = []
         for st in loadCSV(self.STIMULUS_CONFIG):            
             self.stimulusObjList.append(Stimulus(st,canvas,app))
         self.printStimulusList()
-
 
     def terminateRun(self):
         for i in self.stimulusObjList:
@@ -47,7 +37,7 @@ class StimulusGenerator:
             i +=1
 
         # if we reached the end we are done with this run 
-        if self.stimulusObjListLoc >= len(self.stimulusObjList):
+        if i >= len(self.stimulusObjList):
             return Stimulus.DONE
 
         # if we got here *then* the object in stimulusObjListLoc is not done

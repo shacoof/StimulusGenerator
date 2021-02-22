@@ -14,12 +14,11 @@ class Stimulus:
     FAST = 1
     SLOW = 2
 
-
-    batchNo = EMPTY
-    status  = WAITING
-    speedMode = FAST
-
     def __init__(self, stimulus,canvas,app):
+        self.shape          = -1
+        self.batchNo        = self.EMPTY
+        self.status         = self.WAITING
+        self.speedMode      = self.FAST
         self.app             = app
         self.canvas          = canvas
         self.stXStart        = int(stimulus["startX"])*app.vsWidth/1000
@@ -140,7 +139,5 @@ class Stimulus:
 
     def terminateRun(self):
         self.canvas.delete(self.shape)
-
-
 
 
