@@ -7,30 +7,13 @@ import logging
 from math import trunc
 import sys
 from StimuliGenerator import *
+import constants
 
 
 class App:
-    APP_CONFIG_FILE = "appConfig.csv"
-    LOCATION    = "l"
-    SIZE        = "s"
-    UPDATE      = "u"
-    RUN         = "r"
-    PAUSE       = "p"
-    GO          = "g"
-    FILL_COLOR  = "Green"
-    LOCATION    = "l"
-    SIZE        = "s"
-    UPDATE      = "u"
-    RUN         = "r"
-    PAUSE       = "p"
-    GO          = "g"
-    LINE_WIDTH  = 5 
-    FAST = 1
-    SLOW = 2
-    SLEEP_TIME = 1 # 1 ms
-    MOVE = 1
-    SLEEP = 0 
+
     sg = ""
+
 
     def __init__(self,screen):
         self.controlMode = "l" # l = location, s = size
@@ -41,7 +24,7 @@ class App:
         self.vsColor         = 0
         self.stimulusColor   = 0
         self.xBoundry        = 0 
-        self.appConfig   = loadCSV(self.APP_CONFIG_FILE)   
+        self.appConfig   = loadCSV(constants.APP_CONFIG_FILE)   
         self.vsX         = self.getAppConfig("fishScreenStartX")
         self.vsY         = self.getAppConfig("fishScreenStartY")
         self.vsWidth     = self.getAppConfig("fishScreenWidth")
@@ -86,7 +69,7 @@ class App:
         self.appConfig[0]["fishScreenStartY"]=self.vsY
         self.appConfig[0]["fishScreenWidth"]=self.vsWidth
         self.appConfig[0]["fishScreenHeight"]=self.vsHeight
-        writeCSV(self.APP_CONFIG_FILE,self.appConfig[0])
+        writeCSV(constants.APP_CONFIG_FILE,self.appConfig[0])
         self.printVirtualScreenData()
         logging.debug("Config file updates successfully")
 
@@ -121,10 +104,10 @@ class App:
     def processEvent(self,event):
         logging.debug(event)
         self.chagneVirtualScreenProperties(event.keysym)
-        if self.controlMode == self.LOCATION:
+        if self.controlMode == constants.LOCATION:
             self.canvas.move(self.vs,x,y)
             self.canvas.move(self.xBoundry,x,y)
-        elif self.controlMode == self.SIZE:
+        elif self.controlMode == constants.SIZE:
             x0, y0, x1, y1 = self.canvas.coords(self.vs)
             x1 = x0 + self.vsWidth
             y1 = y0 + self.vsHeight
@@ -136,23 +119,23 @@ class App:
     def manageStimulus(self,event):    
         logging.debug(event)
             
-        if event.keysym == self.PAUSE:
-            self.state = self.PAUSE    
+        if event.keysym == constants.PAUSE:
+            self.state = constants.PAUSE    
             if self.sg != "":
                 self.sg.terminateRun()
-        elif event.keysym == self.RUN:
-            self.state = self.RUN
+        elif event.keysym == constants.RUN:
+            self.state = constants.RUN
             self.sg = StimulusGenerator(self.canvas, self)
             self.runStimuli()           
 
     def runStimuli(self):
-        if self.state == self.PAUSE:
+        if self.state == constants.PAUSE:
             return
-        if self.sg.runStimuli() == Stimulus.DONE:
+        if self.sg.runStimuli() == constants.DONE:
             logging.info("All stimuli were executed ! ")
-            self.state = self.PAUSE
+            self.state = constants.PAUSE
         else:
-            self.canvas.after(self.SLEEP_TIME,self.runStimuli)
+            self.canvas.after(constants.SLEEP_TIME,self.runStimuli)
 
     def calcGeometry(self,screen_width, screen_height):
         geometryStr = str(screen_width)+"x"+str(screen_height)+"+-10+0"
@@ -185,9 +168,9 @@ class App:
             self.canvas.delete(self.xBoundry)
         else:
             self.xMode = True
-            self.xBoundry    = self.canvas.create_rectangle(self.vsX-10,self.vsY-10,self.vsX+self.vsWidth+10,self.vsY+self.vsHeight+10,fill = self.FILL_COLOR)
-            self.xHorizental = self.canvas.create_line(self.vsX,self.vsY+self.vsHeight/2,self.vsX+self.vsWidth,self.vsY+self.vsHeight/2,fill=self.FILL_COLOR,width= self.LINE_WIDTH)        
-            self.xVertical   = self.canvas.create_line(self.vsX+self.vsWidth/2,self.vsY,self.vsX+self.vsWidth/2,self.vsY+self.vsHeight,fill=self.FILL_COLOR,width= self.LINE_WIDTH)
+            self.xBoundry    = self.canvas.create_rectangle(self.vsX-10,self.vsY-10,self.vsX+self.vsWidth+10,self.vsY+self.vsHeight+10,fill = constants.FILL_COLOR)
+            self.xHorizental = self.canvas.create_line(self.vsX,self.vsY+self.vsHeight/2,self.vsX+self.vsWidth,self.vsY+self.vsHeight/2,fill=constants.FILL_COLOR,width= constants.LINE_WIDTH)        
+            self.xVertical   = self.canvas.create_line(self.vsX+self.vsWidth/2,self.vsY,self.vsX+self.vsWidth/2,self.vsY+self.vsHeight,fill=constants.FILL_COLOR,width= constants.LINE_WIDTH)
             self.canvas.tag_lower(self.xBoundry)
  
     def chagneVirtualScreenProperties(self,direction):
@@ -202,7 +185,7 @@ class App:
         x=0
         y=0
 
-        if self.controlMode == self.LOCATION:
+        if self.controlMode == constants.LOCATION:
             if direction.lower() == "up":
                 y -= 1
                 self.vsY -=1
@@ -215,7 +198,7 @@ class App:
             elif direction.lower() == "right":
                 x += 1
                 self.vsX+=1
-        elif self.controlMode == self.SIZE:
+        elif self.controlMode == constants.SIZE:
             if direction.lower() == "up":
                 self.vsHeight -= 1
             elif direction.lower() == "down":

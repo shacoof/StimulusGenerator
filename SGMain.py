@@ -430,10 +430,5 @@ if __name__ == "__main__":
    main() 
 
    
-   #ActionItem add reload of csv DONE
-   #ActionItem show/hide cross DONE
-   #ActionItem changing speed Done
-   #ActionItem subsequent stimuli are running with delay>=0 with previous one , like power-point
-   #ActionItem increase size linearly 
-   #ActionItem add a label at the top with current stimulus info
+
    

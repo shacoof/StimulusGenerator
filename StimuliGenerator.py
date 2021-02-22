@@ -3,16 +3,13 @@ import logging
 from math import trunc
 from Stimulus import *
 class StimulusGenerator:
-    STIMULUS_CONFIG = "StimulusConfig.csv"
-    AFTER = "after"
-    WITH = "with"
 
     def __init__ (self,canvas,app):
         self.batchNo = 0
         self.canvas = canvas
         self.app = app
         self.stimulusObjList = []
-        for st in loadCSV(self.STIMULUS_CONFIG):            
+        for st in loadCSV(constants.STIMULUS_CONFIG):            
             self.stimulusObjList.append(Stimulus(st,canvas,app))
         self.printStimulusList()
 
@@ -33,16 +30,16 @@ class StimulusGenerator:
         i = 0
 
         # skip stimulus that are done 
-        while i < len(self.stimulusObjList) and self.stimulusObjList[i].status == Stimulus.DONE:
+        while i < len(self.stimulusObjList) and self.stimulusObjList[i].status == constants.DONE:
             i +=1
 
         # if we reached the end we are done with this run 
         if i >= len(self.stimulusObjList):
-            return Stimulus.DONE
+            return constants.DONE
 
         # if we got here *then* the object in stimulusObjListLoc is not done
         # we will loop on all the running shapes and progress them
-        while i < len(self.stimulusObjList) and self.stimulusObjList[i].status == Stimulus.RUNNING :
+        while i < len(self.stimulusObjList) and self.stimulusObjList[i].status == constants.RUNNING :
             self.stimulusObjList[i].move()
             i +=1
             found = True 
@@ -53,7 +50,7 @@ class StimulusGenerator:
             self.stimulusObjList[i].initShape(self.batchNo)
             i +=1             
             #adding all subsequent WITH stimulus to the current one 
-            while i < len(self.stimulusObjList) and self.stimulusObjList[i].startMode.lower() == self.WITH:
+            while i < len(self.stimulusObjList) and self.stimulusObjList[i].startMode.lower() == constants.WITH:
                 self.stimulusObjList[i].initShape(self.batchNo)
                 i +=1             
             

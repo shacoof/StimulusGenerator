@@ -44,3 +44,11 @@ fastSpeed/slowSpeed = step per milisecond, each step the shape is moved (screen_
 fastDuration/slowDuration = how many cycles of fast/speed before switching to the other one
 startMode = can be AFTER or WITH. a stimulus starts AFTER the previous one completed or WITH the previous one. in both cases delay (ms) can be applied
 delay = see startMode
+
+
+  ActionItem add reload of csv DONE
+  ActionItem show/hide cross DONE
+  ActionItem changing speed Done
+  ActionItem subsequent stimuli are running with delay>=0 with previous one , like power-point DONE
+  ActionItem increase size linearly 
+  ActionItem add a label at the top with current stimulus info
