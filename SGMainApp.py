@@ -15,6 +15,7 @@ class App:
     sg = ""
 
     def __init__(self,screen):
+        self.debug = False
         self.controlMode = "l" # l = location, s = size
         self.xMode           = False # false - no x is displayed in the middle of the screen 
         self.xVertical       = 0 
@@ -61,6 +62,7 @@ class App:
         screen.bind('<Down>', self.processEvent)
         screen.bind('<Left>',self.processEvent)
         screen.bind('<Right>',self.processEvent)
+        screen.bind('d',self.turnDebug)
         screen.bind('l',self.changeControlMode)
         screen.bind('s',self.changeControlMode)
         screen.bind('u',self.updateConfig)
@@ -144,6 +146,7 @@ class App:
             return
         if self.sg.runStimuli() == constants.DONE:
             logging.info("All stimuli were executed ! ")
+            self.setLabelText("Done")
             self.state = constants.PAUSE    
         else:
             self.canvas.after(constants.SLEEP_TIME,self.runStimuli)
@@ -237,8 +240,18 @@ class App:
         return(self.convertMMToPixels(self.convertDegreesToMM(degrees),direction))
 
     def setLabelText(self,str):
-        self.textVar.set(str)
+        if self.debug:
+            self.textVar.set(str)
 
+    def turnDebug(self,event):
+        if self.debug:
+            logging.info("disable debug")            
+            self.debug = False
+            self.label.grid_remove()
+        else:
+            logging.info("enable debug")            
+            self.debug = True
+            self.label.grid()
 
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
 root = Tk()
