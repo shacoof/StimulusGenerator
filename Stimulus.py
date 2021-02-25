@@ -5,8 +5,9 @@ import constants
 
 class Stimulus:
 
-    def __init__(self, stimulus,canvas,app):
+    def __init__(self, stimulus,canvas,app,stimulusID):
         
+        self.stimulusID     = stimulusID
         self.shape          = -1
         self.batchNo        = constants.EMPTY
         self.status         = constants.WAITING
@@ -19,8 +20,8 @@ class Stimulus:
         self.stYEnd          = int(stimulus["endY"])*app.vsHeight/constants.VIRTUAL_SCREEN_LOGICAL_HEIGHT
         self.fastSpeed       = int(stimulus["fastSpeed"])
         self.slowSpeed       = int(stimulus["slowSpeed"])
-        self.startShapeRadius = int(stimulus["startShapeRadius"])
-        self.endShapeRadius  = int(stimulus["endShapeRadius"])
+        self.startShapeRadius = self.app.convertDegreestoPixels(int(stimulus["startShapeRadius"]),"width")
+        self.endShapeRadius  = self.app.convertDegreestoPixels(int(stimulus["endShapeRadius"]),"width")
         self.fastDuration    = int(stimulus["fastDuration"])
         self.slowDuration    = int(stimulus["slowDuration"])
         self.startMode       = stimulus["startMode"]
@@ -32,37 +33,37 @@ class Stimulus:
         self.currRadius         = self.startShapeRadius             
         self.speed              = self.fastSpeed
         self.timeInSpeed        = 0 
-        self.sleepTime          = 0
+        self.delaySoFar          = 0
+        self.repNo              = 0
 
+        self.PixelsPerMSFastX    = self.app.convertDegreestoPixels(self.fastSpeed,"X")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to msת 
+        self.PixelsPerMSSlowX    = self.app.convertDegreestoPixels(self.slowSpeed,"X")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
+        self.PixelsPerMSFastY    = self.app.convertDegreestoPixels(self.fastSpeed,"Y")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
+        self.PixelsPerMSSlowY    = self.app.convertDegreestoPixels(self.slowSpeed,"Y")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
 
-        # since x,y is between 0-999 but actual width,height are different we need to normalize steps
-        self.xNorm = self.app.vsWidth/constants.VIRTUAL_SCREEN_LOGICAL_WIDTH
-        self.yNorm = self.app.vsHeight/constants.VIRTUAL_SCREEN_LOGICAL_HEIGHT
 
         self.stXOrientation = constants.LEFT_RIGHT
         self.stYOrientation = constants.TOP_DOWN   
 
         if self.stXStart > self.stXEnd:
-            self.xNorm=-self.xNorm
             self.stXOrientation = constants.RIGHT_LEFT
+            self.PixelsPerMSFastX *= -1
+            self.PixelsPerMSSlowX *= -1
         elif self.stXEnd == self.stXStart:
-            self.xNorm = 0
-
+            self.PixelsPerMSFastX = 0
+            self.PixelsPerMSSlowX = 0
+        
         if self.stYStart > self.stYEnd:
-            self.yNorm=-self.yNorm
+            self.PixelsPerMSFastY *= -1
+            self.PixelsPerMSSlowY *= -1
             self.stYOrientation = constants.DOWN_TOP
         elif self.stYEnd == self.stYStart:
-            self.yNorm=0
+            self.PixelsPerMSFastY = 0
+            self.PixelsPerMSSlowY = 0
 
+        self.xChange = self.PixelsPerMSFastX
+        self.yChange = self.PixelsPerMSFastY
         self.radiuseNorm = (self.endShapeRadius-self.startShapeRadius)/constants.VIRTUAL_SCREEN_LOGICAL_HEIGHT
-
-        self.repNo = 0
-        self.speed = self.fastSpeed
-        self.timeInSpeed = 0 
-        self.sleepTime = 0
-
-    def _create_circle(self,canvas, x, y, r, **kwargs):
-        return canvas.create_oval(x-r, y-r, x+r, y+r, **kwargs)
 
     def initShape(self,batchNo):
         self.batchNo = batchNo
@@ -76,18 +77,19 @@ class Stimulus:
             logging.info("sending f9 communication")
             sendF9Marker()
 
-        self.shape = self._create_circle(self.canvas,
-                                trunc(self.shapeX),
-                                trunc(self.shapeY),
-                                trunc(self.startShapeRadius),
-                                fill = self.app.stimulusColor)
+        self.shape = self.canvas.create_oval(trunc(self.shapeX),
+                                            trunc(self.shapeY),
+                                            trunc(self.shapeX+self.startShapeRadius),
+                                            trunc(self.shapeY+self.startShapeRadius),
+                                            fill = self.app.stimulusColor, width=20,outline='')
+
 
         logging.info("Shape created")
 
     def move(self):
         """
             every cycle is 1 milisecond
-            every cycle the program wakes up and decide what to do 
+            every cycle we add add 
                 - if sleepTime == speed then move otherwise slepp for another milisecond
                 - if timeInSpeed == fastDuration then chagne to slow mode (and vice versa)
                     - timeInSpeed = 0
@@ -96,34 +98,36 @@ class Stimulus:
             speedMode = FAST or SLOW
 
         """
+        self.delaySoFar +=1*constants.SLEEP_TIME
+        if self.delaySoFar < self.delay:
+            return
         x0, y0, x1, y1 = self.canvas.coords(self.shape)
+        self.shapeX += self.xChange*constants.SLEEP_TIME
+        self.shapeY += self.yChange*constants.SLEEP_TIME  
+        self.currRadius += self.radiuseNorm*constants.SLEEP_TIME
         #is it time to move the shape
-        if self.sleepTime == self.speed:
-            self.canvas.delete(self.shape)
-            self.currRadius += self.radiuseNorm
-            self.shapeX += self.xNorm
-            self.shapeY += self.yNorm            
-            self.shape = self._create_circle(self.canvas,
-                                trunc(self.shapeX),
-                                trunc(self.shapeY),
-                                trunc(self.currRadius),
-                                fill = self.app.stimulusColor)
-            #self.canvas.move(self.shape,self.xNorm,self.yNorm)
-            self.sleepTime = 0
-        else:
-            self.sleepTime +=1
+        if  (trunc(self.shapeX) != x0 or
+             trunc(self.shapeY) != y0 or 
+             self.radiuseNorm != 0):
+            #logging.debug(f"move shape = {self.stimulusID} ")
+            self.canvas.coords(self.shape,
+                               self.shapeX,
+                               self.shapeY,
+                               self.shapeX+self.currRadius,
+                               self.shapeY+self.currRadius)
+
 
         # is it time to change speed 
         if self.speedMode==constants.FAST and self.timeInSpeed == self.fastDuration:
             self.timeInSpeed = 0
-            self.speed       = self.slowSpeed
             self.speedMode   = constants.SLOW
-            self.sleepTime   = 0
+            self.xChange = self.PixelsPerMSSlowX
+            self.yChange = self.PixelsPerMSSlowY
         elif self.speedMode==constants.SLOW and self.timeInSpeed == self.slowDuration:
             self.timeInSpeed = 0
-            self.speed       = self.fastSpeed
             self.speedMode   = constants.FAST
-            self.sleepTime   = 0
+            self.xChange = self.PixelsPerMSFastX
+            self.yChange = self.PixelsPerMSFastY
         else :
             self.timeInSpeed +=1
 
@@ -147,3 +151,6 @@ class Stimulus:
 
     def terminateRun(self):
         self.canvas.delete(self.shape)
+
+    def __str__(self):
+        return f'id = {self.stimulusID} (x0,x1,y0,y1) {self.stXStart} {self.stXEnd} {self.stYStart} {self.stYEnd}'

@@ -22,6 +22,9 @@ fishScreenStartY
 fishScreenWidth
 fishScreenHeight
 f9CommunicationEnabled - if on then we try to communicate with a server running on the Stream-7 machine (needs to be up and running). Note that if the server is not running then the program will hangs as the communication is synchronous 
+DishRadiusSize = the radius of the fish-dish (mm), used for calculaiton of degress / object size / speed 
+VirtualScreenDegrees = how many (out of 360 degress) the virtual screen is taking. speed is measured in degrees per second. 
+VirtualScreenWidthActualSize = the size in mm of the VirtualScreen,  it is circa 2*pi*DishRadiusSize/2 but we don't caluclate it to allow flexability as the virtual screen captures less than 1/2 
 
 stimulusConfig.csv
 The coordinates of the virtual screen are between 0-999. top left corenr is (0,0)
@@ -29,21 +32,23 @@ We automatically translates these coordinates to the real size of the virtual sc
 example : if the real virtual screensize is 100x50 then all coordinates between (0,0) and (99,49) will be mapped to (0,0)
 the formula is trunc(x/virtual screen width) and trunc(y/virtual screen height)
 
-Shape	: Circle, Rectangle 
-ShapeWidth : 
-ShapeHeight : ignored for circle
+Shape	: Circle 
+startX,startY,endX,endY : start and end points of shape track
 StartX : x=0 is the top-left corner of the fishScreen as defined in appConfig.csv fishScreen parameters 
 StartY : y=0 is the top-left corner of the fishScreen as defined in appConfig.csv fishScreen parameters 
-EndX : 
-EndY :
-repetition 
-fastSpeed/slowSpeed = step per milisecond, each step the shape is moved (screen_width/1000)/speed. Note : if screen_width < 1000 then movement will happen once every few miliseconds, e.g. 
-    screen_width = 250 and speed = 1 means that every 4 milisecond the shape will move 1 pixel
-    screen_widht = 250 and speed = 2 means that every 8 miliseconds the shape will move 1 pixel
-    speed = 1 the fastest
-fastDuration/slowDuration = how many cycles of fast/speed before switching to the other one
-startMode = can be AFTER or WITH. a stimulus starts AFTER the previous one completed or WITH the previous one. in both cases delay (ms) can be applied
-delay = see startMode
+repetition : how many times the stimulus will run 
+startShapeRadius,endShapeRadius : measured in degrees 
+fastDuration,slowDuration : distribution of time (in ms) for each phase 
+startMode : AFTER the previous stimulus completed or starting WITH the previous stimulus, in both cases delay (in ms) can be applied 
+fastSpeed/slowSpeed = measured in degrees per second 
+
+formula 
+object size (shapeRadius) is measured in degrees. We translate degrees to mm as follows
+    ObjectSize in mm =  2*DishRadiusSize*tan(shapeRadius/2) 
+we translate mm to pixels as follows
+    ObjectSize in pixels =  (vsWidth[in pixels] * objectSize[in mm]) / VirtualScreenWidthActualSize[in mm]
+
+
 
 
   ActionItem add reload of csv DONE

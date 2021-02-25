@@ -1,10 +1,10 @@
 from tkinter import Canvas,mainloop,Tk,BOTH
-from tkinter import ttk
+from tkinter import ttk,StringVar
 from tkinter.constants import MOVETO
 from tkinter.ttk import tkinter
 from utils import loadCSV,writeCSV,sendF9Marker
 import logging
-from math import trunc
+from math import degrees, trunc,tan,pi
 import sys
 from StimuliGenerator import *
 import constants
@@ -13,7 +13,6 @@ import constants
 class App:
 
     sg = ""
-
 
     def __init__(self,screen):
         self.controlMode = "l" # l = location, s = size
@@ -33,6 +32,14 @@ class App:
         self.vsColor     = self.getAppConfig("virtualScreenColor","str")
         self.stimulusColor  = self.getAppConfig("stimulusColor","str")
         self.f9CommunicationEnabled = self.getAppConfig("f9CommunicationEnabled","str")
+        self.DishRadiusSize = self.getAppConfig("DishRadiusSize")
+        self.VirtualScreenDegrees = self.getAppConfig("VirtualScreenDegrees")
+        self.VirtualScreenWidthActualSize = self.getAppConfig("VirtualScreenWidthActualSize")
+        self.VirtualScreenHeightActualSize = self.getAppConfig("VirtualScreenHeightActualSize")
+        self.deltaX = 0
+        self.deltaY = 0 
+
+
         if self.f9CommunicationEnabled.lower() == "on" :        
             self.f9CommunicationEnabled = True
         else :
@@ -44,7 +51,11 @@ class App:
         geometryStr = self.calcGeometry(self.screen_width, self.screen_height)
         screen.geometry(geometryStr)
         self.canvas = Canvas(screen,background="black")
-        self.canvas.pack(fill=BOTH,expand=1)    
+        self.textVar = tkinter.StringVar()
+        self.label = ttk.Label(self.canvas, textvariable=self.textVar)
+        self.label.config(font=("Courier", 20))
+        self.label.grid(column = 0, row = 0)        
+        self.canvas.pack(fill=BOTH,expand=1)
         self.vs = self.canvas.create_rectangle(self.vsX,self.vsY,self.vsX+self.vsWidth,self.vsY+self.vsHeight,fill = self.vsColor) 
         screen.bind('<Up>', self.processEvent)
         screen.bind('<Down>', self.processEvent)
@@ -105,8 +116,8 @@ class App:
         logging.debug(event)
         self.chagneVirtualScreenProperties(event.keysym)
         if self.controlMode == constants.LOCATION:
-            self.canvas.move(self.vs,x,y)
-            self.canvas.move(self.xBoundry,x,y)
+            self.canvas.move(self.vs,self.deltaX,self.deltaY)
+            self.canvas.move(self.xBoundry,self.deltaX,self.deltaY)
         elif self.controlMode == constants.SIZE:
             x0, y0, x1, y1 = self.canvas.coords(self.vs)
             x1 = x0 + self.vsWidth
@@ -133,13 +144,13 @@ class App:
             return
         if self.sg.runStimuli() == constants.DONE:
             logging.info("All stimuli were executed ! ")
-            self.state = constants.PAUSE
+            self.state = constants.PAUSE    
         else:
             self.canvas.after(constants.SLEEP_TIME,self.runStimuli)
 
     def calcGeometry(self,screen_width, screen_height):
         geometryStr = str(screen_width)+"x"+str(screen_height)+"+-10+0"
-        return geometryStr
+        return geometryStr  
     
     def printVirtualScreenData(self):
         logging.debug("X="+str(self.vsX)+" Y="+str(self.vsY)+" Width="+str(self.vsWidth)+" Height="+str(self.vsHeight))
@@ -180,23 +191,22 @@ class App:
         Args:
             direction ([String]): the event.keySym Up,Down,Left,Rigth
         """
-        global x,y # for some reason PYLANCE required this 
-        global vsHeight,vsWidth,vsX,vsY
-        x=0
-        y=0
+        # we need delta X and Y as tkinter move is relative to the existing locaiton whereas teh vsX and vsY are absolute 
+        self.deltaX=0 
+        self.deltaY=0
 
         if self.controlMode == constants.LOCATION:
             if direction.lower() == "up":
-                y -= 1
+                self.deltaY -= 1
                 self.vsY -=1
             elif direction.lower() == "down":
-                y += 1
+                self.deltaY += 1
                 self.vsY+=1
             elif direction.lower() == "left":
-                x -= 1
+                self.deltaX -= 1
                 self.vsX-=1
             elif direction.lower() == "right":
-                x += 1
+                self.deltaX += 1
                 self.vsX+=1
         elif self.controlMode == constants.SIZE:
             if direction.lower() == "up":
@@ -208,8 +218,29 @@ class App:
             elif direction.lower() == "right":
                 self.vsWidth += 1
 
+    def convertDegreesToMM(self,degrees):
+        return 2*self.DishRadiusSize*tan(degrees*(pi/180)/2) 
 
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+    def convertMMToPixels(self,mm,direction):
+        if direction.lower() == "width":
+            return (mm*self.vsWidth)/self.VirtualScreenWidthActualSize
+        else:
+            return (mm*self.vsHeight)/self.VirtualScreenHeightActualSize
+
+    def convertDegreestoPixels(self,degrees,direction):
+        """[summary]
+
+        Args:
+            degrees ([int]): [degrees to be convereted]
+            direction ([string]): [width or height]
+        """
+        return(self.convertMMToPixels(self.convertDegreesToMM(degrees),direction))
+
+    def setLabelText(self,str):
+        self.textVar.set(str)
+
+
+logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
 root = Tk()
 app = App(root)
 root.mainloop()

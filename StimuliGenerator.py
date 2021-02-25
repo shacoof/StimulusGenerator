@@ -9,8 +9,10 @@ class StimulusGenerator:
         self.canvas = canvas
         self.app = app
         self.stimulusObjList = []
+        id=0
         for st in loadCSV(constants.STIMULUS_CONFIG):            
-            self.stimulusObjList.append(Stimulus(st,canvas,app))
+            id+=1
+            self.stimulusObjList.append(Stimulus(st,canvas,app,id))
         self.printStimulusList()
 
     def terminateRun(self):
@@ -37,12 +39,19 @@ class StimulusGenerator:
         if i >= len(self.stimulusObjList):
             return constants.DONE
 
+        s=""
         # if we got here *then* the object in stimulusObjListLoc is not done
         # we will loop on all the running shapes and progress them
         while i < len(self.stimulusObjList) and self.stimulusObjList[i].status == constants.RUNNING :
-            self.stimulusObjList[i].move()
-            i +=1
+            self.stimulusObjList[i].move()            
             found = True 
+            s += str(self.stimulusObjList[i])+"\n"
+            i +=1
+
+        if found:
+            self.app.setLabelText(s)
+        else: 
+            self.app.setLabelText("")
 
         # if there are no running shapes, i.e. no batch in progress we need to calculate next batch
         if not found and i < len(self.stimulusObjList):
