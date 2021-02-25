@@ -241,7 +241,9 @@ class App:
 
     def setLabelText(self,str):
         if self.debug:
-            self.textVar.set(str)
+            s = f'VS WxH {self.vsWidth} X {self.vsHeight}'
+            s1 = f'1 degree/ms (LtR) = {self.convertDegreestoPixels(1,"widht")} pixels/ms'
+            self.textVar.set(s+'\n'+s1+'\n'+str)
 
     def turnDebug(self,event):
         if self.debug:

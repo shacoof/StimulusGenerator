@@ -153,4 +153,4 @@ class Stimulus:
         self.canvas.delete(self.shape)
 
     def __str__(self):
-        return f'id = {self.stimulusID} (x0,x1,y0,y1) {self.stXStart} {self.stXEnd} {self.stYStart} {self.stYEnd}'
+        return f'id = {self.stimulusID} (x0,x1,y0,y1) {self.stXStart} {self.stXEnd} {self.stYStart} {self.stYEnd} (pixelsPerMS WxH) {self.PixelsPerMSFastX}X{self.PixelsPerMSFastY}'
