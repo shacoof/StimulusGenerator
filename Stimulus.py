@@ -100,7 +100,9 @@ class Stimulus:
         """
         self.delaySoFar +=1*constants.SLEEP_TIME
         if self.delaySoFar < self.delay:
+            self.canvas.itemconfigure(self.shape, state='hidden')
             return
+        self.canvas.itemconfigure(self.shape, state='normal')
         x0, y0, x1, y1 = self.canvas.coords(self.shape)
         self.shapeX += self.xChange*constants.SLEEP_TIME
         self.shapeY += self.yChange*constants.SLEEP_TIME  
