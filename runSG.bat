@@ -1,1 +1,1 @@
-python SGMain.py
+python SGMainApp.py

@@ -1,2 +1,2 @@
 fishScreenStartX,fishScreenStartY,fishScreenWidth,fishScreenHeight,f9CommunicationEnabled,backgroundColor,virtualScreenColor,stimulusColor,DishRadiusSize,VirtualScreenDegrees,VirtualScreenWidthActualSize,VirtualScreenHeightActualSize
-498,686,291,165,OFF,Black,White,Black,17,170,50,15
+694,720,163,50,ON,Black,White,Black,17,170,50,10

@@ -4,7 +4,7 @@ from tkinter.constants import MOVETO
 from tkinter.ttk import tkinter
 from utils import loadCSV,writeCSV,sendF9Marker
 import logging
-from math import degrees, trunc,tan,pi
+from math import degrees, trunc,tan,pi,sin
 import sys
 from StimuliGenerator import *
 import constants
@@ -120,12 +120,16 @@ class App:
         if self.controlMode == constants.LOCATION:
             self.canvas.move(self.vs,self.deltaX,self.deltaY)
             self.canvas.move(self.xBoundry,self.deltaX,self.deltaY)
+            self.canvas.move(self.xHorizental,self.deltaX,self.deltaY)
+            self.canvas.move(self.xVertical,self.deltaX,self.deltaY)
         elif self.controlMode == constants.SIZE:
             x0, y0, x1, y1 = self.canvas.coords(self.vs)
             x1 = x0 + self.vsWidth
             y1 = y0 + self.vsHeight
             self.canvas.coords(self.vs, x0, y0, x1, y1)
-            self.canvas.coords(self.xBoundry,x0-10,y0-10,x1+10,y1+10)
+            if self.xMode:
+                self.deleteCross()
+                self.createCross()
             
         return
 
@@ -146,7 +150,7 @@ class App:
             return
         if self.sg.runStimuli() == constants.DONE:
             logging.info("All stimuli were executed ! ")
-            self.setLabelText("Done")
+            self.setDebugText("Done")
             self.state = constants.PAUSE    
         else:
             self.canvas.after(constants.SLEEP_TIME,self.runStimuli)
@@ -177,16 +181,22 @@ class App:
 
         if self.xMode:
             self.xMode = False
-            self.canvas.delete(self.xHorizental)
-            self.canvas.delete(self.xVertical)
-            self.canvas.delete(self.xBoundry)
+            self.deleteCross()
         else:
             self.xMode = True
-            self.xBoundry    = self.canvas.create_rectangle(self.vsX-10,self.vsY-10,self.vsX+self.vsWidth+10,self.vsY+self.vsHeight+10,fill = constants.FILL_COLOR)
-            self.xHorizental = self.canvas.create_line(self.vsX,self.vsY+self.vsHeight/2,self.vsX+self.vsWidth,self.vsY+self.vsHeight/2,fill=constants.FILL_COLOR,width= constants.LINE_WIDTH)        
-            self.xVertical   = self.canvas.create_line(self.vsX+self.vsWidth/2,self.vsY,self.vsX+self.vsWidth/2,self.vsY+self.vsHeight,fill=constants.FILL_COLOR,width= constants.LINE_WIDTH)
-            self.canvas.tag_lower(self.xBoundry)
- 
+            self.createCross()
+
+    def deleteCross(self):
+        self.canvas.delete(self.xHorizental)
+        self.canvas.delete(self.xVertical)
+        self.canvas.delete(self.xBoundry)
+
+    def createCross(self):
+        self.xBoundry    = self.canvas.create_rectangle(self.vsX-10,self.vsY-10,self.vsX+self.vsWidth+10,self.vsY+self.vsHeight+10,fill = constants.FILL_COLOR)
+        self.xHorizental = self.canvas.create_line(self.vsX,self.vsY+self.vsHeight/2,self.vsX+self.vsWidth,self.vsY+self.vsHeight/2,fill=constants.FILL_COLOR,width= constants.LINE_WIDTH)        
+        self.xVertical   = self.canvas.create_line(self.vsX+self.vsWidth/2,self.vsY,self.vsX+self.vsWidth/2,self.vsY+self.vsHeight,fill=constants.FILL_COLOR,width= constants.LINE_WIDTH)
+        self.canvas.tag_lower(self.xBoundry)
+
     def chagneVirtualScreenProperties(self,direction):
         """
         Change screen Location or Size properties based on controlMode
@@ -222,7 +232,7 @@ class App:
                 self.vsWidth += 1
 
     def convertDegreesToMM(self,degrees):
-        return 2*self.DishRadiusSize*tan(degrees*(pi/180)/2) 
+        return 2*self.DishRadiusSize*sin(degrees*(pi/180)/2) 
 
     def convertMMToPixels(self,mm,direction):
         if direction.lower() == "width":
@@ -239,10 +249,10 @@ class App:
         """
         return(self.convertMMToPixels(self.convertDegreesToMM(degrees),direction))
 
-    def setLabelText(self,str):
+    def setDebugText(self,str):
         if self.debug:
             s = f'VS WxH {self.vsWidth} X {self.vsHeight}'
-            s1 = f'1 degree/ms (LtR) = {self.convertDegreestoPixels(1,"widht")} pixels/ms'
+            s1 = f'1 degree/ms (LtR) = {round(self.convertDegreestoPixels(1,"widht"),1)} pixels/ms'
             self.textVar.set(s+'\n'+s1+'\n'+str)
 
     def turnDebug(self,event):

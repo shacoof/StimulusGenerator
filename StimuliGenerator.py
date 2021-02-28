@@ -49,9 +49,9 @@ class StimulusGenerator:
             i +=1
 
         if found:
-            self.app.setLabelText(s)
+            self.app.setDebugText(s)
         else: 
-            self.app.setLabelText("")
+            self.app.setDebugText("")
 
         # if there are no running shapes, i.e. no batch in progress we need to calculate next batch
         if not found and i < len(self.stimulusObjList):

@@ -36,7 +36,7 @@ class Stimulus:
         self.delaySoFar          = 0
         self.repNo              = 0
 
-        self.PixelsPerMSFastX    = self.app.convertDegreestoPixels(self.fastSpeed,"X")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to msת 
+        self.PixelsPerMSFastX    = self.app.convertDegreestoPixels(self.fastSpeed,"X")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
         self.PixelsPerMSSlowX    = self.app.convertDegreestoPixels(self.slowSpeed,"X")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
         self.PixelsPerMSFastY    = self.app.convertDegreestoPixels(self.fastSpeed,"Y")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
         self.PixelsPerMSSlowY    = self.app.convertDegreestoPixels(self.slowSpeed,"Y")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
@@ -83,7 +83,7 @@ class Stimulus:
                                             trunc(self.shapeY+self.startShapeRadius),
                                             fill = self.app.stimulusColor, width=20,outline='')
 
-
+        self.canvas.itemconfigure(self.shape, state='hidden')
         logging.info("Shape created")
 
     def move(self):
@@ -98,15 +98,15 @@ class Stimulus:
             speedMode = FAST or SLOW
 
         """
+        
         self.delaySoFar +=1*constants.SLEEP_TIME
         if self.delaySoFar < self.delay:
-            self.canvas.itemconfigure(self.shape, state='hidden')
             return
         self.canvas.itemconfigure(self.shape, state='normal')
         x0, y0, x1, y1 = self.canvas.coords(self.shape)
-        self.shapeX += self.xChange*constants.SLEEP_TIME
-        self.shapeY += self.yChange*constants.SLEEP_TIME  
-        self.currRadius += self.radiuseNorm*constants.SLEEP_TIME
+        self.shapeX += self.xChange
+        self.shapeY += self.yChange
+        self.currRadius += self.radiuseNorm
         #is it time to move the shape
         if  (trunc(self.shapeX) != x0 or
              trunc(self.shapeY) != y0 or 
@@ -131,10 +131,10 @@ class Stimulus:
             self.xChange = self.PixelsPerMSFastX
             self.yChange = self.PixelsPerMSFastY
         else :
-            self.timeInSpeed +=1
+            self.timeInSpeed +=1*constants.SLEEP_TIME
 
         
-        #logging.info("moving shape to new location x="+str(x0)+" y="+str(y0))
+        #logging.debug("moving shape to new location x="+str(x0)+" y="+str(y0))
         # This stimulus repitiion reached its end 
         if  ((self.stXOrientation==constants.LEFT_RIGHT and x1 > self.app.vsX + self.stXEnd+constants.SPACE_BUFFER) or
             (self.stXOrientation==constants.RIGHT_LEFT and x1 < self.app.vsX + self.stXEnd+constants.SPACE_BUFFER) or 
@@ -155,4 +155,4 @@ class Stimulus:
         self.canvas.delete(self.shape)
 
     def __str__(self):
-        return f'id = {self.stimulusID} (x0,x1,y0,y1) {self.stXStart} {self.stXEnd} {self.stYStart} {self.stYEnd} (pixelsPerMS WxH) {self.PixelsPerMSFastX}X{self.PixelsPerMSFastY}'
+        return f'id = ({self.stimulusID} (x0,x1,y0,y1) {self.stXStart} {self.stXEnd} {self.stYStart} {self.stYEnd}(pixelsPerMS WxH) {round(self.PixelsPerMSFastX,1)}X{round(self.PixelsPerMSFastY,1)}'
