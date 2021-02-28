@@ -73,9 +73,7 @@ class Stimulus:
         self.shapeY = self.app.vsY + self.stYStart
         self.currRadius = self.startShapeRadius
 
-        if  self.app.f9CommunicationEnabled:
-            logging.info("sending f9 communication")
-            sendF9Marker()
+        self.f9CommunicationSent = False
 
         self.shape = self.canvas.create_oval(trunc(self.shapeX),
                                             trunc(self.shapeY),
@@ -102,6 +100,12 @@ class Stimulus:
         self.delaySoFar +=1*constants.SLEEP_TIME
         if self.delaySoFar < self.delay:
             return
+
+        if  self.app.f9CommunicationEnabled and not self.f9CommunicationSent:
+            logging.info("sending f9 communication")
+            sendF9Marker()
+            self.f9CommunicationSent = True
+
         self.canvas.itemconfigure(self.shape, state='normal')
         x0, y0, x1, y1 = self.canvas.coords(self.shape)
         self.shapeX += self.xChange
