@@ -57,3 +57,8 @@ we translate mm to pixels as follows
   ActionItem subsequent stimuli are running with delay>=0 with previous one , like power-point DONE
   ActionItem increase size linearly 
   ActionItem add a label at the top with current stimulus info
+
+
+  alternatives
+  http://www.portugueslab.com/stytra/userguide/1_examples_gallery.html
+  http://psychtoolbox.org/docs/MorphDemo
