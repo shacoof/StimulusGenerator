@@ -22,12 +22,13 @@ def sendF9Marker():
     HOST = '132.64.105.40'  # The IP address of the streams-7 macing, can be obtained using ipconfig 
     PORT = 65432        # The port used by the server
 
-    print ("Trying to connect host "+HOST+" Port "+ str(PORT))
+    logging.debug(f'Trying to connect host {HOST} Port {PORT}')
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((HOST, PORT))
         tsStart = time.time()
         s.sendall(b'f9') #sending f9 that cause stream-7 to create event-marker 
+        data = s.recv(1024)
         tsEnd=time.time()
-        logging.debug("time diff =" + str((tsEnd-tsStart)/10))
-        logging.info ("Marker sent !")
+        logging.debug(f'Comm round trip was {(tsEnd-tsStart)*1000} ms')
+        #logging.info ("Marker sent !")

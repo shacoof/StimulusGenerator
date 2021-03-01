@@ -2,6 +2,7 @@ from utils import loadCSV,writeCSV,sendF9Marker
 import logging
 from math import trunc
 import constants
+import time
 
 class Stimulus:
 
@@ -102,11 +103,13 @@ class Stimulus:
             return
 
         if  self.app.f9CommunicationEnabled and not self.f9CommunicationSent:
-            logging.info("sending f9 communication")
+            #logging.info("sending f9 communication")
+            #logging.debug(f'before f9 communication {time.time()}')
             sendF9Marker()
             self.f9CommunicationSent = True
 
         self.canvas.itemconfigure(self.shape, state='normal')
+        #logging.debug(f'shape presented 1 {time.time()}')
         x0, y0, x1, y1 = self.canvas.coords(self.shape)
         self.shapeX += self.xChange
         self.shapeY += self.yChange
@@ -121,6 +124,8 @@ class Stimulus:
                                self.shapeY,
                                self.shapeX+self.currRadius,
                                self.shapeY+self.currRadius)
+            self.t2 = time.time()
+            #logging.debug(f'shape moved 2 {time.time()}')
 
 
         # is it time to change speed 
