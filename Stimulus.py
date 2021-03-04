@@ -129,12 +129,12 @@ class Stimulus:
 
 
         # is it time to change speed 
-        if self.speedMode==constants.FAST and self.timeInSpeed == self.fastDuration:
+        if self.speedMode==constants.FAST and self.timeInSpeed >= self.fastDuration:
             self.timeInSpeed = 0
             self.speedMode   = constants.SLOW
             self.xChange = self.PixelsPerMSSlowX
             self.yChange = self.PixelsPerMSSlowY
-        elif self.speedMode==constants.SLOW and self.timeInSpeed == self.slowDuration:
+        elif self.speedMode==constants.SLOW and self.timeInSpeed >= self.slowDuration:
             self.timeInSpeed = 0
             self.speedMode   = constants.FAST
             self.xChange = self.PixelsPerMSFastX
