@@ -28,13 +28,18 @@ class Stimulus:
         self.startMode       = stimulus["startMode"]
         self.delay           = int(stimulus["delay"])
         self.repetitions    = int(stimulus["repetitions"])
+        self.duration       = int(stimulus["duration"])
+        self.exitCriteria       = stimulus["exitCriteria"]
+        
+
         self.shapeX         = 0
         self.shapeY         = 0 
 
         self.currRadius         = self.startShapeRadius             
         self.speed              = self.fastSpeed
         self.timeInSpeed        = 0 
-        self.delaySoFar          = 0
+        self.delaySoFar         = 0
+        self.timeInStimulus     = 0
         self.repNo              = 0
 
         self.PixelsPerMSFastX    = self.app.convertDegreestoPixels(self.fastSpeed,"X")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
@@ -64,7 +69,14 @@ class Stimulus:
 
         self.xChange = self.PixelsPerMSFastX
         self.yChange = self.PixelsPerMSFastY
-        self.radiuseNorm = (self.endShapeRadius-self.startShapeRadius)/constants.VIRTUAL_SCREEN_LOGICAL_HEIGHT
+        # change in size is determined based on the exitCriteria 
+        # if time then duration determines the pace of the change
+        # if distance then it will be based on the time it will take the sahpe to travel from start to end 
+
+        if self.exitCriteria.lower() == constants.TIME:
+            self.radiuseNorm = (self.endShapeRadius-self.startShapeRadius)/(self.duration/constants.SLEEP_TIME)
+        else:
+            self.radiuseNorm = (self.endShapeRadius-self.startShapeRadius)/(abs(self.stXStart-self.stXEnd)/constants.SLEEP_TIME)
 
     def initShape(self,batchNo):
         self.batchNo = batchNo
@@ -98,7 +110,9 @@ class Stimulus:
 
         """
         
-        self.delaySoFar +=1*constants.SLEEP_TIME
+        self.timeInStimulus += constants.SLEEP_TIME
+        self.delaySoFar     += constants.SLEEP_TIME
+
         if self.delaySoFar < self.delay:
             return
 
@@ -148,7 +162,8 @@ class Stimulus:
         if  ((self.stXOrientation==constants.LEFT_RIGHT and x1 > self.app.vsX + self.stXEnd+constants.SPACE_BUFFER) or
             (self.stXOrientation==constants.RIGHT_LEFT and x1 < self.app.vsX + self.stXEnd+constants.SPACE_BUFFER) or 
             (self.stYOrientation==constants.TOP_DOWN and y1 > self.app.vsY + self.stYEnd+constants.SPACE_BUFFER) or
-            (self.stYOrientation==constants.DOWN_TOP and y1 < self.app.vsY + self.stYEnd+constants.SPACE_BUFFER)): 
+            (self.stYOrientation==constants.DOWN_TOP and y1 < self.app.vsY + self.stYEnd+constants.SPACE_BUFFER) or
+            (self.timeInStimulus >= self.duration and self.exitCriteria.lower() == constants.TIME) ): 
             logging.info("repetition completed !")
             self.repNo += 1
             self.canvas.delete(self.shape)        
