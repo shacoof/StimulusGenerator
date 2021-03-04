@@ -76,7 +76,11 @@ class Stimulus:
         if self.exitCriteria.lower() == constants.TIME:
             self.radiuseNorm = (self.endShapeRadius-self.startShapeRadius)/(self.duration/constants.SLEEP_TIME)
         else:
-            self.radiuseNorm = (self.endShapeRadius-self.startShapeRadius)/(abs(self.stXStart-self.stXEnd)/constants.SLEEP_TIME)
+            self.radiuseNorm = (self.endShapeRadius-self.startShapeRadius)/(abs(self.stXStart-self.stXEnd)/self.xChange)
+
+        # pre calculating edges to save time 
+        self.xEdge = self.app.vsX + self.stXEnd+constants.SPACE_BUFFER 
+        self.yEdge = self.app.vsY + self.stYEnd+constants.SPACE_BUFFER
 
     def initShape(self,batchNo):
         self.batchNo = batchNo
@@ -132,7 +136,7 @@ class Stimulus:
         if  (trunc(self.shapeX) != x0 or
              trunc(self.shapeY) != y0 or 
              self.radiuseNorm != 0):
-            #logging.debug(f"move shape = {self.stimulusID} ")
+            logging.debug(f"move shape x = {self.shapeX} y = {self.shapeY} ")
             self.canvas.coords(self.shape,
                                self.shapeX,
                                self.shapeY,
@@ -159,10 +163,10 @@ class Stimulus:
         
         #logging.debug("moving shape to new location x="+str(x0)+" y="+str(y0))
         # This stimulus repitiion reached its end 
-        if  ((self.stXOrientation==constants.LEFT_RIGHT and x1 > self.app.vsX + self.stXEnd+constants.SPACE_BUFFER) or
-            (self.stXOrientation==constants.RIGHT_LEFT and x1 < self.app.vsX + self.stXEnd+constants.SPACE_BUFFER) or 
-            (self.stYOrientation==constants.TOP_DOWN and y1 > self.app.vsY + self.stYEnd+constants.SPACE_BUFFER) or
-            (self.stYOrientation==constants.DOWN_TOP and y1 < self.app.vsY + self.stYEnd+constants.SPACE_BUFFER) or
+        if  ((self.stXOrientation==constants.LEFT_RIGHT and x0 > self.xEdge) or
+            (self.stXOrientation==constants.RIGHT_LEFT and  x0 < self.xEdge) or 
+            (self.stYOrientation==constants.TOP_DOWN and    y0 > self.yEdge) or
+            (self.stYOrientation==constants.DOWN_TOP and    y0 < self.yEdge) or
             (self.timeInStimulus >= self.duration and self.exitCriteria.lower() == constants.TIME) ): 
             logging.info("repetition completed !")
             self.repNo += 1
