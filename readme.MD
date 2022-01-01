@@ -42,13 +42,13 @@ fastDuration,slowDuration : distribution of time (in ms) for each phase
 startMode : AFTER the previous stimulus completed or starting WITH the previous stimulus, in both cases delay (in ms) can be applied 
 fastSpeed/slowSpeed = measured in degrees per second 
 exitCriteria : if Distance then the stimulus ends when the shpae reaches the endX / endY. if Time then stimulus ends after X ms (as given by duration column)
-euration is ignored for tiem based stimuli
+duration is ignored for time based stimuli
 if distance is used then duration is ignored 
 if time is used then distance is also applicable, i.e. we don't allow the stimulus to go beyond endX,endY
 change in size is determined based on the exitCriteria 
 if time then duration determines the pace of the change
 if distance then it will be based on the time it will take the sahpe to travel from start to end 
-
+if SPACER is used then we want to present empty screen for the duration, the rest of the values are ignored 
 
 formula 
 object size (shapeRadius) is measured in degrees. We translate degrees to mm as follows

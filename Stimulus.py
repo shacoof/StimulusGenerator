@@ -75,23 +75,32 @@ class Stimulus:
 
         if self.exitCriteria.lower() == constants.TIME:
             self.radiuseNorm = (self.endShapeRadius-self.startShapeRadius)/(self.duration/constants.SLEEP_TIME)
-        else:
+        elif self.exitCriteria.lower() == constants.DISTANCE:
             self.radiuseNorm = (self.endShapeRadius-self.startShapeRadius)/(abs(self.stXStart-self.stXEnd)/self.xChange)
+        elif self.exitCriteria.lower() == constants.SPACER:
+            self.radiuseNorm =0
 
-        # pre calculating edges to save time 
+            # pre calculating edges to save time
         self.xEdge = self.app.vsX + self.stXEnd+constants.SPACE_BUFFER 
         self.yEdge = self.app.vsY + self.stYEnd+constants.SPACE_BUFFER
 
     def initShape(self,batchNo):
+
         self.batchNo = batchNo
         self.status = constants.RUNNING
+        self.f9CommunicationSent = False
+        self.trigger_out_sent = False  # important to reset when shape is init (new move)
+
+        # if SPACER then no need to set the data for the shape
+        if self.exitCriteria.lower() == constants.SPACER:
+            logging.info("Spacer, no need to set other info")
+            return
+
+
 
         self.shapeX = self.app.vsX + self.stXStart
         self.shapeY = self.app.vsY + self.stYStart
         self.currRadius = self.startShapeRadius
-
-        self.f9CommunicationSent = False
-
         self.shape = self.canvas.create_oval(trunc(self.shapeX),
                                             trunc(self.shapeY),
                                             trunc(self.shapeX+self.startShapeRadius),
@@ -126,6 +135,16 @@ class Stimulus:
             sendF9Marker()
             self.f9CommunicationSent = True
 
+
+        if (self.exitCriteria.lower() == constants.SPACER):
+            if (self.timeInStimulus >= self.duration):
+                logging.info("SPACER completed !")
+                self.status = constants.DONE
+                repNo = 0
+
+            return
+
+
         self.canvas.itemconfigure(self.shape, state='normal')
         #logging.debug(f'shape presented 1 {time.time()}')
         x0, y0, x1, y1 = self.canvas.coords(self.shape)
@@ -136,14 +155,12 @@ class Stimulus:
         if  (trunc(self.shapeX) != x0 or
              trunc(self.shapeY) != y0 or 
              self.radiuseNorm != 0):
-            logging.debug(f"move shape x = {self.shapeX} y = {self.shapeY} ")
+            # logging.debug(f"move shape x = {self.shapeX} y = {self.shapeY} ")
             self.canvas.coords(self.shape,
                                self.shapeX,
                                self.shapeY,
                                self.shapeX+self.currRadius,
                                self.shapeY+self.currRadius)
-            self.t2 = time.time()
-            #logging.debug(f'shape moved 2 {time.time()}')
 
 
         # is it time to change speed 
@@ -172,7 +189,7 @@ class Stimulus:
             self.repNo += 1
             self.canvas.delete(self.shape)        
             # we finished all repitiions for this stimulus and we need to move to next stimulus
-            if self.repNo >= self.repetitions:            
+            if self.repNo >= self.repetitions:
                 self.status = constants.DONE
                 repNo = 0
             else:
