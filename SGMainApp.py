@@ -21,13 +21,20 @@ class App:
     def __init__(self,screen):
         self.debug = False
         self.controlMode = "l" # l = location, s = size
+        # user by the x (cross) button to show virtual screen cross
         self.xMode           = False # false - no x is displayed in the middle of the screen
         self.xVertical       = 0
         self.xHorizental     = 0
+        self.xBoundry        = 0
+
+        # used by the y (mid button)  button to show mid screen marker
+        self.yMode           = False # false - mid screen marker is not display
+        self.yVertical      = 0
+        self.yHorizental    = 0
+        #####
         self.bgColor         = 0
         self.vsColor         = 0
         self.stimulusColor   = 0
-        self.xBoundry        = 0
         self.appConfig   = loadCSV(constants.APP_CONFIG_FILE)
         self.vsX         = self.getAppConfig("fishScreenStartX")
         self.vsY         = self.getAppConfig("fishScreenStartY")
@@ -85,6 +92,7 @@ class App:
         screen.bind(constants.RUN, self.manageStimulus)
         screen.bind(constants.PAUSE, self.manageStimulus)
         screen.bind(constants.CROSS, self.showCrossAndBoundries)
+        screen.bind(constants.MID_SCREEN, self.showMidScreen)
         screen.bind('?', self.printHelp)
         self.printHelp("")
 
@@ -206,10 +214,36 @@ class App:
             self.xMode = True
             self.createCross()
 
+
+    def showMidScreen(self, event):
+        logging.debug(event)
+
+        if self.yMode:
+            self.yMode = False
+            self.deleteMidScreen()
+        else:
+            self.yMode = True
+            self.createMidScreen()
+
     def deleteCross(self):
         self.canvas.delete(self.xHorizental)
         self.canvas.delete(self.xVertical)
         self.canvas.delete(self.xBoundry)
+
+    def deleteMidScreen(self):
+        self.canvas.delete(self.yHorizental)
+        self.canvas.delete(self.yVertical)
+
+    def createMidScreen(self):
+        self.xHorizental = self.canvas.create_line(self.vsX, self.vsY + self.vsHeight / 2, self.vsX + self.vsWidth,
+                                                   self.vsY + self.vsHeight / 2, fill=constants.FILL_COLOR,
+                                                   width=constants.LINE_WIDTH)
+        self.xVertical = self.canvas.create_line(self.vsX + self.vsWidth / 2, self.vsY, self.vsX + self.vsWidth / 2,
+                                                 self.vsY + self.vsHeight, fill=constants.FILL_COLOR,
+                                                 width=constants.LINE_WIDTH)
+        self.canvas.tag_lower(self.xBoundry)
+
+
 
     def createCross(self):
         self.xBoundry = self.canvas.create_rectangle(self.vsX - 10, self.vsY - 10, self.vsX + self.vsWidth + 10,
