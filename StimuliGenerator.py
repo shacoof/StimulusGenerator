@@ -65,9 +65,9 @@ class StimulusGenerator:
         # if there are no running shapes, i.e. no batch in progress we need to calculate next batch
         if not found and i < len(self.stimulusObjList):
             self.batchNo += 1
-            self.stimulusObjList[i].initShape(self.batchNo)
+            self.stimulusObjList[i].init_shape(self.batchNo)
             i += 1
             # adding all subsequent WITH stimulus to the current one
             while i < len(self.stimulusObjList) and self.stimulusObjList[i].startMode.lower() == constants.WITH:
-                self.stimulusObjList[i].initShape(self.batchNo)
+                self.stimulusObjList[i].init_shape(self.batchNo)
                 i += 1

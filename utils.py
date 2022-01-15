@@ -3,6 +3,9 @@ import socket
 import time
 import logging
 
+
+
+
 def loadCSV(csvFileName):
     with open(csvFileName, mode='r') as infile:
         reader = csv.DictReader(infile)

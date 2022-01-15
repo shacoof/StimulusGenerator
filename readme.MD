@@ -49,6 +49,9 @@ change in size is determined based on the exitCriteria
 if time then duration determines the pace of the change
 if distance then it will be based on the time it will take the sahpe to travel from start to end 
 if SPACER is used then we want to present empty screen for the duration, the rest of the values are ignored 
+xType = either degrees or pixel. determines how to interprate the x(Start/end etc.) parameter
+   * if pixels (old way) then pixels will be transformed from virtual screen (1000) to actual screen size
+   * if degrees (new way) then degrees will be converted to pixels based using calcConvertPositionToPixelsTable which takes into account the fact that the dish is oval
 
 formula 
 object size (shapeRadius) is measured in degrees. We translate degrees to mm as follows
@@ -70,3 +73,9 @@ we translate mm to pixels as follows
   alternatives
   http://www.portugueslab.com/stytra/userguide/1_examples_gallery.html
   http://psychtoolbox.org/docs/MorphDemo
+  
+
+***************
+pip install pipreqs
+pipreqs /path/to/project
+pip install screeninfo

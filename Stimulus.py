@@ -1,24 +1,20 @@
-from utils import loadCSV,writeCSV,sendF9Marker
+from utils import sendF9Marker
 import logging
 from math import trunc
 import constants
-import time
 
 class Stimulus:
 
-    def __init__(self, stimulus,canvas,app,stimulusID):
+    def __init__(self, stimulus, canvas, app, stimulus_id):
         
-        self.stimulusID     = stimulusID
+        self.stimulusID     = stimulus_id
         self.shape          = -1
         self.batchNo        = constants.EMPTY
         self.status         = constants.WAITING
         self.speedMode      = constants.FAST
         self.app             = app
         self.canvas          = canvas
-        self.stXStart        = int(stimulus["startX"])*app.vsWidth/constants.VIRTUAL_SCREEN_LOGICAL_WIDTH
-        self.stYStart        = int(stimulus["startY"])*app.vsHeight/constants.VIRTUAL_SCREEN_LOGICAL_HEIGHT
-        self.stXEnd          = int(stimulus["endX"])*app.vsWidth/constants.VIRTUAL_SCREEN_LOGICAL_WIDTH
-        self.stYEnd          = int(stimulus["endY"])*app.vsHeight/constants.VIRTUAL_SCREEN_LOGICAL_HEIGHT
+        # fast speed is in degrees per second
         self.fastSpeed       = int(stimulus["fastSpeed"])
         self.slowSpeed       = int(stimulus["slowSpeed"])
         self.startShapeRadius = self.app.convertDegreestoPixels(int(stimulus["startShapeRadius"]),"width")
@@ -30,6 +26,7 @@ class Stimulus:
         self.repetitions    = int(stimulus["repetitions"])
         self.duration       = int(stimulus["duration"])
         self.exitCriteria       = stimulus["exitCriteria"]
+
         
 
         self.shapeX         = 0
@@ -41,6 +38,13 @@ class Stimulus:
         self.delaySoFar         = 0
         self.timeInStimulus     = 0
         self.repNo              = 0
+
+        self.xType = stimulus["xType"]
+
+        self.stXStart        = int(stimulus["startX"])*app.vsWidth/constants.VIRTUAL_SCREEN_LOGICAL_WIDTH
+        self.stYStart        = int(stimulus["startY"])*app.vsHeight/constants.VIRTUAL_SCREEN_LOGICAL_HEIGHT
+        self.stXEnd          = int(stimulus["endX"])*app.vsWidth/constants.VIRTUAL_SCREEN_LOGICAL_WIDTH
+        self.stYEnd          = int(stimulus["endY"])*app.vsHeight/constants.VIRTUAL_SCREEN_LOGICAL_HEIGHT
 
         self.PixelsPerMSFastX    = self.app.convertDegreestoPixels(self.fastSpeed,"X")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
         self.PixelsPerMSSlowX    = self.app.convertDegreestoPixels(self.slowSpeed,"X")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
@@ -71,22 +75,22 @@ class Stimulus:
         self.yChange = self.PixelsPerMSFastY
         # change in size is determined based on the exitCriteria 
         # if time then duration determines the pace of the change
-        # if distance then it will be based on the time it will take the sahpe to travel from start to end 
+        # if distance then it will be based on the time it will take the shape to travel from start to end
 
         if self.exitCriteria.lower() == constants.TIME:
-            self.radiuseNorm = (self.endShapeRadius-self.startShapeRadius)/(self.duration/constants.SLEEP_TIME)
+            self.radiusNorm = (self.endShapeRadius - self.startShapeRadius) / (self.duration / constants.SLEEP_TIME)
         elif self.exitCriteria.lower() == constants.DISTANCE:
-            self.radiuseNorm = (self.endShapeRadius-self.startShapeRadius)/(abs(self.stXStart-self.stXEnd)/self.xChange)
+            self.radiusNorm = (self.endShapeRadius - self.startShapeRadius) / (abs(self.stXStart - self.stXEnd) / self.xChange)
         elif self.exitCriteria.lower() == constants.SPACER:
-            self.radiuseNorm =0
+            self.radiusNorm =0
 
-            # pre calculating edges to save time
+        # pre calculating edges to save time
         self.xEdge = self.app.vsX + self.stXEnd+constants.SPACE_BUFFER 
         self.yEdge = self.app.vsY + self.stYEnd+constants.SPACE_BUFFER
 
-    def initShape(self,batchNo):
+    def init_shape(self, batch_no):
 
-        self.batchNo = batchNo
+        self.batchNo = batch_no
         self.status = constants.RUNNING
         self.f9CommunicationSent = False
         self.trigger_out_sent = False  # important to reset when shape is init (new move)
@@ -112,10 +116,10 @@ class Stimulus:
 
     def move(self):
         """
-            every cycle is 1 milisecond
-            every cycle we add add 
-                - if sleepTime == speed then move otherwise slepp for another milisecond
-                - if timeInSpeed == fastDuration then chagne to slow mode (and vice versa)
+            every cycle is 1 millisecond
+            every cycle we add
+                - if sleepTime == speed then move otherwise sleep for another millisecond
+                - if timeInSpeed == fastDuration then change to slow mode (and vice versa)
                     - timeInSpeed = 0
                     - speed = fast/slow speed (as needed)
 
@@ -131,13 +135,12 @@ class Stimulus:
 
         if  self.app.f9CommunicationEnabled and not self.f9CommunicationSent:
             #logging.info("sending f9 communication")
-            #logging.debug(f'before f9 communication {time.time()}')
             sendF9Marker()
             self.f9CommunicationSent = True
 
 
-        if (self.exitCriteria.lower() == constants.SPACER):
-            if (self.timeInStimulus >= self.duration):
+        if self.exitCriteria.lower() == constants.SPACER:
+            if self.timeInStimulus >= self.duration:
                 logging.info("SPACER completed !")
                 self.status = constants.DONE
                 repNo = 0
@@ -146,15 +149,15 @@ class Stimulus:
 
 
         self.canvas.itemconfigure(self.shape, state='normal')
-        #logging.debug(f'shape presented 1 {time.time()}')
+        #logging.debug(f' shape presented 1 {time.time()}')
         x0, y0, x1, y1 = self.canvas.coords(self.shape)
         self.shapeX += self.xChange
         self.shapeY += self.yChange
-        self.currRadius += self.radiuseNorm
+        self.currRadius += self.radiusNorm
         #is it time to move the shape
         if  (trunc(self.shapeX) != x0 or
              trunc(self.shapeY) != y0 or 
-             self.radiuseNorm != 0):
+             self.radiusNorm != 0):
             # logging.debug(f"move shape x = {self.shapeX} y = {self.shapeY} ")
             self.canvas.coords(self.shape,
                                self.shapeX,
@@ -179,7 +182,7 @@ class Stimulus:
 
         
         #logging.debug("moving shape to new location x="+str(x0)+" y="+str(y0))
-        # This stimulus repitiion reached its end 
+        # This stimulus repetition reached its end
         if  ((self.stXOrientation==constants.LEFT_RIGHT and x0 > self.xEdge) or
             (self.stXOrientation==constants.RIGHT_LEFT and  x0 < self.xEdge) or 
             (self.stYOrientation==constants.TOP_DOWN and    y0 > self.yEdge) or
@@ -188,13 +191,13 @@ class Stimulus:
             logging.info("repetition completed !")
             self.repNo += 1
             self.canvas.delete(self.shape)        
-            # we finished all repitiions for this stimulus and we need to move to next stimulus
+            # we finished all repetitions for this stimulus, and we need to move to next stimulus
             if self.repNo >= self.repetitions:
                 self.status = constants.DONE
                 repNo = 0
             else:
                 logging.info("Starting repetition no="+str(self.repNo+1))
-                self.initShape(self.batchNo) #creating the shape for the next repitition 
+                self.init_shape(self.batchNo) #creating the shape for the next repetition
 
     def terminateRun(self):
         self.canvas.delete(self.shape)

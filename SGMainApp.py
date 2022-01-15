@@ -2,13 +2,15 @@ from tkinter import Canvas, mainloop, Tk, BOTH
 from tkinter import ttk, StringVar
 from tkinter.constants import MOVETO
 from tkinter.ttk import tkinter
+from screeninfo import get_monitors
+import screeninfo
 
 import nidaqmx
 
 from NiDaqPulse import NiDaqPulse
 from utils import loadCSV, writeCSV, sendF9Marker
 import logging
-from math import degrees, trunc, tan, pi, sin
+from math import degrees, trunc, tan, pi, sin, cos, radians
 import sys
 from StimuliGenerator import *
 import constants
@@ -28,7 +30,7 @@ class App:
         self.xBoundry        = 0
 
         # used by the y (mid button)  button to show mid screen marker
-        self.yMode           = False # false - mid screen marker is not display
+        self.yMode           = False # False - no midScreen marker is displayed
         self.yVertical      = 0
         self.yHorizental    = 0
         #####
@@ -49,8 +51,16 @@ class App:
         self.VirtualScreenDegrees = self.getAppConfig("VirtualScreenDegrees")
         self.VirtualScreenWidthActualSize = self.getAppConfig("VirtualScreenWidthActualSize")
         self.VirtualScreenHeightActualSize = self.getAppConfig("VirtualScreenHeightActualSize")
+        self.projectorOnMonitor = self.getAppConfig("projectorOnMonitor")
+        self.xCalcMethod = self.getAppConfig("xCalcMethod")
+
+
+
         self.deltaX = 0
         self.deltaY = 0
+
+        self.positionDegreesToVSTable = []
+        self.calcConvertPositionToPixelsTable() # populate the above table
 
         if self.NiDaqPulseEnabled.lower() == "on":
             # try to add channel
@@ -69,8 +79,8 @@ class App:
             self.f9CommunicationEnabled = False
         logging.info("f9CommunicationEnabled=" + str(self.f9CommunicationEnabled))
         self.printVirtualScreenData()
-        self.screen_width = screen.winfo_screenwidth()
-        self.screen_height = screen.winfo_screenheight()
+        self.screen_width = int(screen.winfo_screenwidth()/4)
+        self.screen_height = int(screen.winfo_screenheight()/4)
         screen.geometry(self.calcGeometry(self.screen_width, self.screen_height))
         self.canvas = Canvas(screen, background="black")
         self.textVar = tkinter.StringVar()
@@ -214,16 +224,16 @@ class App:
             self.xMode = True
             self.createCross()
 
-
     def showMidScreen(self, event):
         logging.debug(event)
+        monitor = self.get_monitors_dimensions(self.projectorOnMonitor)
 
         if self.yMode:
             self.yMode = False
             self.deleteMidScreen()
         else:
+            self.createMidScreen(monitor['width'], monitor['height'])
             self.yMode = True
-            self.createMidScreen()
 
     def deleteCross(self):
         self.canvas.delete(self.xHorizental)
@@ -234,16 +244,17 @@ class App:
         self.canvas.delete(self.yHorizental)
         self.canvas.delete(self.yVertical)
 
-    def createMidScreen(self):
-        self.xHorizental = self.canvas.create_line(self.vsX, self.vsY + self.vsHeight / 2, self.vsX + self.vsWidth,
-                                                   self.vsY + self.vsHeight / 2, fill=constants.FILL_COLOR,
-                                                   width=constants.LINE_WIDTH)
-        self.xVertical = self.canvas.create_line(self.vsX + self.vsWidth / 2, self.vsY, self.vsX + self.vsWidth / 2,
-                                                 self.vsY + self.vsHeight, fill=constants.FILL_COLOR,
-                                                 width=constants.LINE_WIDTH)
-        self.canvas.tag_lower(self.xBoundry)
+    def createMidScreen(self,width,height):
 
+        self.yVertical = self.canvas.create_line(width/2, 0,
+                                                 width /2, height,
+                                                fill=constants.FILL_COLOR,
+                                                width=constants.THIN_LINE_WIDTH)
 
+        self.yHorizental = self.canvas.create_line(0, height / 2,
+                                                width, height / 2,
+                                                 fill=constants.FILL_COLOR,
+                                                 width=constants.THIN_LINE_WIDTH)
 
     def createCross(self):
         self.xBoundry = self.canvas.create_rectangle(self.vsX - 10, self.vsY - 10, self.vsX + self.vsWidth + 10,
@@ -324,8 +335,29 @@ class App:
             self.debug = True
             self.label.grid()
 
+    def get_monitors_dimensions(self,monitor_number):
+        monitors = []
+        for m in get_monitors():
+            print(f'monitor = {m}')
+            monitors.append({"width": m.width,
+                             "height": m.height})
+        return monitors[monitor_number]
+
+    def calcConvertPositionToPixelsTable(self):
+        for i in range(0, 181):
+            if i <= 90:
+                d = 90 - i
+            else:
+                d = i - 90
+        self.positionDegreesToVSTable.append(1000 * sin(radians(d)) * cos(radians(d / 2)) / sin(radians(90 - d / 2)))
+
+
+    def convertPositionDegreesToPixels(self,degrees):
+
+        return (self.convertMMToPixels(self.convertDegreesToMM(degrees), direction))
 
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
+
 root = Tk()
 app = App(root)
 root.mainloop()
