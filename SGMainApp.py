@@ -1,16 +1,11 @@
-from tkinter import Canvas, mainloop, Tk, BOTH
-from tkinter import ttk, StringVar
-from tkinter.constants import MOVETO
+from tkinter import Canvas, Tk, BOTH
+from tkinter import ttk
 from tkinter.ttk import tkinter
 from screeninfo import get_monitors
-import screeninfo
-
 import nidaqmx
-
 from NiDaqPulse import NiDaqPulse
 from utils import loadCSV, writeCSV, sendF9Marker
-import logging
-from math import degrees, trunc, tan, pi, sin, cos, radians
+from math import pi, sin, cos, radians
 import sys
 from StimuliGenerator import *
 import constants
@@ -52,9 +47,6 @@ class App:
         self.VirtualScreenWidthActualSize = self.getAppConfig("VirtualScreenWidthActualSize")
         self.VirtualScreenHeightActualSize = self.getAppConfig("VirtualScreenHeightActualSize")
         self.projectorOnMonitor = self.getAppConfig("projectorOnMonitor")
-        self.xCalcMethod = self.getAppConfig("xCalcMethod")
-
-
 
         self.deltaX = 0
         self.deltaY = 0
@@ -176,7 +168,7 @@ class App:
         if event.keysym == constants.PAUSE:
             self.state = constants.PAUSE
             if self.sg != "":
-                self.sg.terminateRun()
+                self.sg.terminate_run()
         elif event.keysym == constants.RUN:
             self.state = constants.RUN
             self.sg = StimulusGenerator(self.canvas, self, self.output_device)
@@ -185,7 +177,7 @@ class App:
     def runStimuli(self):  # this is main loop of stimulus
         if self.state == constants.PAUSE:
             return
-        if self.sg.runStimuli() == constants.DONE:  # call specific stim list
+        if self.sg.run_stimuli() == constants.DONE:  # call specific stim list
             logging.info("All stimuli were executed ! ")
             self.setDebugText("Done")
             self.state = constants.PAUSE
@@ -347,14 +339,12 @@ class App:
         for i in range(0, 181):
             if i <= 90:
                 d = 90 - i
+                v = 500 - 500 * sin(radians(d)) * cos(radians(d / 2)) / sin(radians(90 - d / 2))
             else:
                 d = i - 90
-        self.positionDegreesToVSTable.append(1000 * sin(radians(d)) * cos(radians(d / 2)) / sin(radians(90 - d / 2)))
+                v = 500+500 * sin(radians(d)) * cos(radians(d / 2)) / sin(radians(90 - d / 2))
+            self.positionDegreesToVSTable.append(v)
 
-
-    def convertPositionDegreesToPixels(self,degrees):
-
-        return (self.convertMMToPixels(self.convertDegreesToMM(degrees), direction))
 
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
 

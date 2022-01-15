@@ -1,7 +1,7 @@
 from utils import sendF9Marker
 import logging
 from math import trunc
-import constants
+from constants import *
 
 class Stimulus:
 
@@ -9,9 +9,9 @@ class Stimulus:
         
         self.stimulusID     = stimulus_id
         self.shape          = -1
-        self.batchNo        = constants.EMPTY
-        self.status         = constants.WAITING
-        self.speedMode      = constants.FAST
+        self.batchNo        = EMPTY
+        self.status         = WAITING
+        self.speedMode      = FAST
         self.app             = app
         self.canvas          = canvas
         # fast speed is in degrees per second
@@ -26,84 +26,104 @@ class Stimulus:
         self.repetitions    = int(stimulus["repetitions"])
         self.duration       = int(stimulus["duration"])
         self.exitCriteria       = stimulus["exitCriteria"]
-
-        
-
         self.shapeX         = 0
         self.shapeY         = 0 
-
-        self.currRadius         = self.startShapeRadius             
+        self.currRadius         = self.startShapeRadius
         self.speed              = self.fastSpeed
         self.timeInSpeed        = 0 
         self.delaySoFar         = 0
         self.timeInStimulus     = 0
         self.repNo              = 0
+        self.f9CommunicationSent = False
+        self.trigger_out_sent = False
 
         self.xType = stimulus["xType"]
 
-        self.stXStart        = int(stimulus["startX"])*app.vsWidth/constants.VIRTUAL_SCREEN_LOGICAL_WIDTH
-        self.stYStart        = int(stimulus["startY"])*app.vsHeight/constants.VIRTUAL_SCREEN_LOGICAL_HEIGHT
-        self.stXEnd          = int(stimulus["endX"])*app.vsWidth/constants.VIRTUAL_SCREEN_LOGICAL_WIDTH
-        self.stYEnd          = int(stimulus["endY"])*app.vsHeight/constants.VIRTUAL_SCREEN_LOGICAL_HEIGHT
+        self.PixelsPerMSFastX = self.app.convertDegreestoPixels(self.fastSpeed, "X") / (
+                    1000 / SLEEP_TIME)  # dividing by 1000 to convert to ms
+        self.PixelsPerMSSlowX = self.app.convertDegreestoPixels(self.slowSpeed, "X") / (
+                    1000 / SLEEP_TIME)  # dividing by 1000 to convert to ms
+        self.PixelsPerMSFastY = self.app.convertDegreestoPixels(self.fastSpeed, "Y") / (
+                    1000 / SLEEP_TIME)  # dividing by 1000 to convert to ms
+        self.PixelsPerMSSlowY = self.app.convertDegreestoPixels(self.slowSpeed, "Y") / (
+                    1000 / SLEEP_TIME)  # dividing by 1000 to convert to ms
 
-        self.PixelsPerMSFastX    = self.app.convertDegreestoPixels(self.fastSpeed,"X")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
-        self.PixelsPerMSSlowX    = self.app.convertDegreestoPixels(self.slowSpeed,"X")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
-        self.PixelsPerMSFastY    = self.app.convertDegreestoPixels(self.fastSpeed,"Y")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
-        self.PixelsPerMSSlowY    = self.app.convertDegreestoPixels(self.slowSpeed,"Y")/(1000/constants.SLEEP_TIME) #dividing by 1000 to convert to ms
+        if self.xType == PIXELS_CALC_METHOD:
+            # calculations for pixels
+            self.stXStart        = int(stimulus["startX"])*app.vsWidth/VIRTUAL_SCREEN_LOGICAL_WIDTH
+            self.stYStart        = int(stimulus["startY"])*app.vsHeight/VIRTUAL_SCREEN_LOGICAL_HEIGHT
+            self.stXEnd          = int(stimulus["endX"])*app.vsWidth/VIRTUAL_SCREEN_LOGICAL_WIDTH
+            self.stYEnd          = int(stimulus["endY"])*app.vsHeight/VIRTUAL_SCREEN_LOGICAL_HEIGHT
+        else:
+            # calculations for degrees
+            self.start_degree = int(stimulus["startX"])
+            self.end_degree = int(stimulus["endX"])
+            self.current_degree = self.start_degree  # this will increase every cycle
+            self.stXStart        = self.app.positionDegreesToVSTable[int(self.start_degree)] * self.app.vsWidth/VIRTUAL_SCREEN_LOGICAL_WIDTH
+            self.stYStart        = int(stimulus["startY"])*app.vsHeight/VIRTUAL_SCREEN_LOGICAL_HEIGHT
+            self.stXEnd          = self.app.positionDegreesToVSTable[int(self.end_degree)] * self.app.vsWidth/VIRTUAL_SCREEN_LOGICAL_WIDTH
+            self.stYEnd          = int(stimulus["endY"])*app.vsHeight/VIRTUAL_SCREEN_LOGICAL_HEIGHT
+            # calculating how many degrees we need to move each move, i.e. awakening
+            if self.start_degree == self.end_degree or self.duration == 0:
+                self.degrees_per_interval = 0
+            else:
+                self.degrees_per_interval = (self.end_degree - self.start_degree)*SLEEP_TIME/(self.duration)
 
-
-        self.stXOrientation = constants.LEFT_RIGHT
-        self.stYOrientation = constants.TOP_DOWN   
+        self.stXOrientation = LEFT_RIGHT
+        self.stYOrientation = TOP_DOWN
 
         if self.stXStart > self.stXEnd:
-            self.stXOrientation = constants.RIGHT_LEFT
+            self.stXOrientation = RIGHT_LEFT
             self.PixelsPerMSFastX *= -1
             self.PixelsPerMSSlowX *= -1
         elif self.stXEnd == self.stXStart:
             self.PixelsPerMSFastX = 0
             self.PixelsPerMSSlowX = 0
-        
+
         if self.stYStart > self.stYEnd:
             self.PixelsPerMSFastY *= -1
             self.PixelsPerMSSlowY *= -1
-            self.stYOrientation = constants.DOWN_TOP
+            self.stYOrientation = DOWN_TOP
         elif self.stYEnd == self.stYStart:
             self.PixelsPerMSFastY = 0
             self.PixelsPerMSSlowY = 0
 
         self.xChange = self.PixelsPerMSFastX
         self.yChange = self.PixelsPerMSFastY
-        # change in size is determined based on the exitCriteria 
+        # change in size is determined based on the exitCriteria
         # if time then duration determines the pace of the change
         # if distance then it will be based on the time it will take the shape to travel from start to end
 
-        if self.exitCriteria.lower() == constants.TIME:
-            self.radiusNorm = (self.endShapeRadius - self.startShapeRadius) / (self.duration / constants.SLEEP_TIME)
-        elif self.exitCriteria.lower() == constants.DISTANCE:
+        if self.exitCriteria.lower() == TIME:
+            self.radiusNorm = (self.endShapeRadius - self.startShapeRadius) / (self.duration / SLEEP_TIME)
+        elif self.exitCriteria.lower() == DISTANCE:
             self.radiusNorm = (self.endShapeRadius - self.startShapeRadius) / (abs(self.stXStart - self.stXEnd) / self.xChange)
-        elif self.exitCriteria.lower() == constants.SPACER:
+        elif self.exitCriteria.lower() == SPACER:
             self.radiusNorm =0
 
         # pre calculating edges to save time
-        self.xEdge = self.app.vsX + self.stXEnd+constants.SPACE_BUFFER 
-        self.yEdge = self.app.vsY + self.stYEnd+constants.SPACE_BUFFER
+        self.xEdge = self.app.vsX + self.stXEnd+SPACE_BUFFER
+        self.yEdge = self.app.vsY + self.stYEnd+SPACE_BUFFER
 
     def init_shape(self, batch_no):
 
         self.batchNo = batch_no
-        self.status = constants.RUNNING
+        self.status = RUNNING
         self.f9CommunicationSent = False
         self.trigger_out_sent = False  # important to reset when shape is init (new move)
 
         # if SPACER then no need to set the data for the shape
-        if self.exitCriteria.lower() == constants.SPACER:
+        if self.exitCriteria.lower() == SPACER:
             logging.info("Spacer, no need to set other info")
             return
 
-
-
-        self.shapeX = self.app.vsX + self.stXStart
         self.shapeY = self.app.vsY + self.stYStart
+        if self.xType == PIXELS_CALC_METHOD:
+            self.shapeX = self.app.vsX + self.stXStart
+        else: # DEGREES_CALC_METHOD
+            # transform the location on logic 1000-pixel screen to our real virtual screen size
+            self.shapeX = self.app.vsX + self.app.positionDegreesToVSTable[int(self.start_degree)] * self.app.vsWidth/1000
+
         self.currRadius = self.startShapeRadius
         self.shape = self.canvas.create_oval(trunc(self.shapeX),
                                             trunc(self.shapeY),
@@ -127,8 +147,8 @@ class Stimulus:
 
         """
         
-        self.timeInStimulus += constants.SLEEP_TIME
-        self.delaySoFar     += constants.SLEEP_TIME
+        self.timeInStimulus += SLEEP_TIME
+        self.delaySoFar     += SLEEP_TIME
 
         if self.delaySoFar < self.delay:
             return
@@ -139,11 +159,10 @@ class Stimulus:
             self.f9CommunicationSent = True
 
 
-        if self.exitCriteria.lower() == constants.SPACER:
+        if self.exitCriteria.lower() == SPACER:
             if self.timeInStimulus >= self.duration:
                 logging.info("SPACER completed !")
-                self.status = constants.DONE
-                repNo = 0
+                self.status = DONE
 
             return
 
@@ -151,10 +170,18 @@ class Stimulus:
         self.canvas.itemconfigure(self.shape, state='normal')
         #logging.debug(f' shape presented 1 {time.time()}')
         x0, y0, x1, y1 = self.canvas.coords(self.shape)
-        self.shapeX += self.xChange
+
+
+        if self.xType == PIXELS_CALC_METHOD:
+            self.shapeX += self.xChange
+        else:  # DEGREES_CALC_METHOD
+            self.current_degree += self.degrees_per_interval
+            # transform the location on logic 1000-pixel screen to our real virtual screen size
+            self.shapeX = self.app.vsX + self.app.positionDegreesToVSTable[int(self.current_degree)] * self.app.vsWidth / 1000
+
         self.shapeY += self.yChange
         self.currRadius += self.radiusNorm
-        #is it time to move the shape
+        #is it time to move the shape, small changes (eliminate by trunc) will not cause redraw
         if  (trunc(self.shapeX) != x0 or
              trunc(self.shapeY) != y0 or 
              self.radiusNorm != 0):
@@ -167,39 +194,38 @@ class Stimulus:
 
 
         # is it time to change speed 
-        if self.speedMode==constants.FAST and self.timeInSpeed >= self.fastDuration:
+        if self.speedMode==FAST and self.timeInSpeed >= self.fastDuration:
             self.timeInSpeed = 0
-            self.speedMode   = constants.SLOW
+            self.speedMode   = SLOW
             self.xChange = self.PixelsPerMSSlowX
             self.yChange = self.PixelsPerMSSlowY
-        elif self.speedMode==constants.SLOW and self.timeInSpeed >= self.slowDuration:
+        elif self.speedMode==SLOW and self.timeInSpeed >= self.slowDuration:
             self.timeInSpeed = 0
-            self.speedMode   = constants.FAST
+            self.speedMode   = FAST
             self.xChange = self.PixelsPerMSFastX
             self.yChange = self.PixelsPerMSFastY
         else :
-            self.timeInSpeed +=1*constants.SLEEP_TIME
+            self.timeInSpeed +=1*SLEEP_TIME
 
         
         #logging.debug("moving shape to new location x="+str(x0)+" y="+str(y0))
         # This stimulus repetition reached its end
-        if  ((self.stXOrientation==constants.LEFT_RIGHT and x0 > self.xEdge) or
-            (self.stXOrientation==constants.RIGHT_LEFT and  x0 < self.xEdge) or 
-            (self.stYOrientation==constants.TOP_DOWN and    y0 > self.yEdge) or
-            (self.stYOrientation==constants.DOWN_TOP and    y0 < self.yEdge) or
-            (self.timeInStimulus >= self.duration and self.exitCriteria.lower() == constants.TIME) ): 
+        if  ((self.stXOrientation==LEFT_RIGHT and x0 > self.xEdge) or
+            (self.stXOrientation==RIGHT_LEFT and  x0 < self.xEdge) or
+            (self.stYOrientation==TOP_DOWN and    y0 > self.yEdge) or
+            (self.stYOrientation==DOWN_TOP and    y0 < self.yEdge) or
+            (self.timeInStimulus >= self.duration and self.exitCriteria.lower() == TIME) ):
             logging.info("repetition completed !")
             self.repNo += 1
             self.canvas.delete(self.shape)        
             # we finished all repetitions for this stimulus, and we need to move to next stimulus
             if self.repNo >= self.repetitions:
-                self.status = constants.DONE
-                repNo = 0
+                self.status = DONE
             else:
                 logging.info("Starting repetition no="+str(self.repNo+1))
                 self.init_shape(self.batchNo) #creating the shape for the next repetition
 
-    def terminateRun(self):
+    def terminate_run(self):
         self.canvas.delete(self.shape)
 
     def __str__(self):

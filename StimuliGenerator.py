@@ -1,7 +1,6 @@
-from utils import loadCSV, writeCSV, sendF9Marker
-import logging
-from math import trunc
+from utils import loadCSV
 from Stimulus import *
+from constants import *
 
 
 class StimulusGenerator:
@@ -12,40 +11,40 @@ class StimulusGenerator:
         self.canvas = canvas
         self.app = app
         self.stimulusObjList = []
-        id = 0
-        for st in loadCSV(constants.STIMULUS_CONFIG):
-            id += 1
-            self.stimulusObjList.append(Stimulus(st, canvas, app, id))
-        self.printStimulusList()
+        stim_id = 0
+        for st in loadCSV(STIMULUS_CONFIG):
+            stim_id += 1
+            self.stimulusObjList.append(Stimulus(st, canvas, app, stim_id))
+        self.print_stimulus_list()
 
-    def terminateRun(self):
+    def terminate_run(self):
         for i in self.stimulusObjList:
-            i.terminateRun()
+            i.terminate_run()
 
-    def printStimulusList(self):
+    def print_stimulus_list(self):
         for i in self.stimulusObjList:
             print(vars(i))
 
-    def getStimulusState(self, stimulus):
-        return (stimulus.batchNo, stimulus.status, stimulus.startMode)
+    def get_stimulus_state(self, stimulus):
+        return stimulus.batchNo, stimulus.status, stimulus.startMode
 
-    def runStimuli(self):
+    def run_stimuli(self):
         # last stimulus was completed
         found = False
         i = 0
 
         # skip stimulus that are done 
-        while i < len(self.stimulusObjList) and self.stimulusObjList[i].status == constants.DONE:
+        while i < len(self.stimulusObjList) and self.stimulusObjList[i].status == DONE:
             i += 1
 
         # if we reached the end we are done with this run 
         if i >= len(self.stimulusObjList):
-            return constants.DONE
+            return DONE
 
         s = ""
         # if we got here *then* the object in stimulusObjListLoc is not done
         # we will loop on all the running shapes and progress them
-        while i < len(self.stimulusObjList) and self.stimulusObjList[i].status == constants.RUNNING:
+        while i < len(self.stimulusObjList) and self.stimulusObjList[i].status == RUNNING:
             self.stimulusObjList[i].move()
             if not self.stimulusObjList[i].trigger_out_sent:
                 if self.output_device is not None:
@@ -68,6 +67,6 @@ class StimulusGenerator:
             self.stimulusObjList[i].init_shape(self.batchNo)
             i += 1
             # adding all subsequent WITH stimulus to the current one
-            while i < len(self.stimulusObjList) and self.stimulusObjList[i].startMode.lower() == constants.WITH:
+            while i < len(self.stimulusObjList) and self.stimulusObjList[i].startMode.lower() == WITH:
                 self.stimulusObjList[i].init_shape(self.batchNo)
                 i += 1
