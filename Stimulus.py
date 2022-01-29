@@ -204,18 +204,16 @@ class Stimulus:
                       f"current_degree={self.current_degree} ")
 
         #is it time to move the shape, small changes (eliminate by trunc) will not cause redraw
-        if  (trunc(self.shapeX) != x0 or
-             trunc(self.shapeY) != y0 or 
-             self.radiusNorm != 0):
+        #if  (trunc(self.shapeX) != x0 or
+        #     trunc(self.shapeY) != y0 or
+        #     self.radiusNorm != 0 or
+        #    abs(adjusted_radius - self.currRadius) > 0.2 ):
             # logging.debug(f"move shape x = {self.shapeX} y = {self.shapeY} ")
-            self.canvas.coords(self.shape,
-                               self.shapeX,
-                               self.shapeY,
-                               self.shapeX+adjusted_radius,
-                               self.shapeY+adjusted_radius
-                               #self.shapeX+self.currRadius,
-                               #self.shapeY+self.currRadius
-                               )
+        self.canvas.coords(self.shape,
+                           self.shapeX,
+                           self.shapeY,
+                           self.shapeX+adjusted_radius,
+                           self.shapeY+adjusted_radius)
 
 
         # is it time to change speed 
