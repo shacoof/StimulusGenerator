@@ -1,6 +1,6 @@
 from utils import sendF9Marker
 import logging
-from math import trunc
+from math import trunc,sin,radians
 from constants import *
 
 class Stimulus:
@@ -125,10 +125,11 @@ class Stimulus:
             self.shapeX = self.app.vsX + self.app.positionDegreesToVSTable[int(self.start_degree)] * self.app.vsWidth/1000
 
         self.currRadius = self.startShapeRadius
+        # start with size 0, move does distortion correction so no need to display the shape here
         self.shape = self.canvas.create_oval(trunc(self.shapeX),
                                             trunc(self.shapeY),
-                                            trunc(self.shapeX+self.startShapeRadius),
-                                            trunc(self.shapeY+self.startShapeRadius),
+                                            trunc(self.shapeX),
+                                            trunc(self.shapeY),
                                             fill = self.app.stimulusColor, width=20,outline='')
 
         self.canvas.itemconfigure(self.shape, state='hidden')
@@ -193,10 +194,14 @@ class Stimulus:
         if self.current_degree > 90:
             alpha = 180 - alpha
 
-        adjusted_radius = self.currRadius * self.app.DishRadiusSize * \
+        if alpha < 40:
+            alpha=40
+
+        adjusted_radius = self.currRadius * \
                           (1-((sin(radians(90-alpha))*sin(radians(45 -alpha/2)))/sin(radians(90 + alpha)/2)))
 
-
+        logging.debug(f"current_radius={self.currRadius}, adjusted_radius={adjusted_radius}, "
+                      f"current_degree={self.current_degree} ")
 
         #is it time to move the shape, small changes (eliminate by trunc) will not cause redraw
         if  (trunc(self.shapeX) != x0 or
@@ -206,8 +211,11 @@ class Stimulus:
             self.canvas.coords(self.shape,
                                self.shapeX,
                                self.shapeY,
-                               self.shapeX+self.currRadius,
-                               self.shapeY+self.currRadius)
+                               self.shapeX+adjusted_radius,
+                               self.shapeY+adjusted_radius
+                               #self.shapeX+self.currRadius,
+                               #self.shapeY+self.currRadius
+                               )
 
 
         # is it time to change speed 

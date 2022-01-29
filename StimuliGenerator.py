@@ -70,3 +70,5 @@ class StimulusGenerator:
             while i < len(self.stimulusObjList) and self.stimulusObjList[i].startMode.lower() == WITH:
                 self.stimulusObjList[i].init_shape(self.batchNo)
                 i += 1
+
+        return RUNNING

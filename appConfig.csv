@@ -1,2 +1,2 @@
 fishScreenStartX,fishScreenStartY,fishScreenWidth,fishScreenHeight,f9CommunicationEnabled,backgroundColor,virtualScreenColor,stimulusColor,DishRadiusSize,VirtualScreenDegrees,VirtualScreenWidthActualSize,VirtualScreenHeightActualSize,NiDaqPulseEnabled,projectorOnMonitor
-576,697,135,27,ON,Black,black,white,17,170,50,10,OFF,2
+558,685,180,39,ON,Black,black,white,17,170,50,10,OFF,1
