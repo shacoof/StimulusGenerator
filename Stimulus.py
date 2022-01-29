@@ -181,6 +181,23 @@ class Stimulus:
 
         self.shapeY += self.yChange
         self.currRadius += self.radiusNorm
+
+        """
+        distortion correction
+        Since the dish is oval there is a distortion on the sides, so the furthest the shape is from the center the 
+        smaller it needs to be         
+        """
+        # 0 = 180, 10=170 , 80 = 100
+        alpha = self.current_degree
+
+        if self.current_degree > 90:
+            alpha = 180 - alpha
+
+        adjusted_radius = self.currRadius * self.app.DishRadiusSize * \
+                          (1-((sin(radians(90-alpha))*sin(radians(45 -alpha/2)))/sin(radians(90 + alpha)/2)))
+
+
+
         #is it time to move the shape, small changes (eliminate by trunc) will not cause redraw
         if  (trunc(self.shapeX) != x0 or
              trunc(self.shapeY) != y0 or 

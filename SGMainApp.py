@@ -12,35 +12,34 @@ import constants
 
 
 class App:
-
     sg = ""
 
-    def __init__(self,screen):
+    def __init__(self, screen):
         self.debug = False
-        self.controlMode = "l" # l = location, s = size
+        self.controlMode = "l"  # l = location, s = size
         # user by the x (cross) button to show virtual screen cross
-        self.xMode           = False # false - no x is displayed in the middle of the screen
-        self.xVertical       = 0
-        self.xHorizental     = 0
-        self.xBoundry        = 0
+        self.xMode = False  # false - no x is displayed in the middle of the screen
+        self.xVertical = 0
+        self.xHorizental = 0
+        self.xBoundry = 0
 
         # used by the y (mid button)  button to show mid screen marker
-        self.yMode           = False # False - no midScreen marker is displayed
-        self.yVertical      = 0
-        self.yHorizental    = 0
+        self.yMode = False  # False - no midScreen marker is displayed
+        self.yVertical = 0
+        self.yHorizental = 0
         #####
-        self.bgColor         = 0
-        self.vsColor         = 0
-        self.stimulusColor   = 0
-        self.appConfig   = loadCSV(constants.APP_CONFIG_FILE)
-        self.vsX         = self.getAppConfig("fishScreenStartX")
-        self.vsY         = self.getAppConfig("fishScreenStartY")
-        self.vsWidth     = self.getAppConfig("fishScreenWidth")
-        self.vsHeight    = self.getAppConfig("fishScreenHeight")
-        self.bgColor     = self.getAppConfig("backgroundColor","str")
-        self.vsColor     = self.getAppConfig("virtualScreenColor","str")
-        self.stimulusColor  = self.getAppConfig("stimulusColor","str")
-        self.f9CommunicationEnabled = self.getAppConfig("f9CommunicationEnabled","str")
+        self.bgColor = 0
+        self.vsColor = 0
+        self.stimulusColor = 0
+        self.appConfig = loadCSV(constants.APP_CONFIG_FILE)
+        self.vsX = self.getAppConfig("fishScreenStartX")
+        self.vsY = self.getAppConfig("fishScreenStartY")
+        self.vsWidth = self.getAppConfig("fishScreenWidth")
+        self.vsHeight = self.getAppConfig("fishScreenHeight")
+        self.bgColor = self.getAppConfig("backgroundColor", "str")
+        self.vsColor = self.getAppConfig("virtualScreenColor", "str")
+        self.stimulusColor = self.getAppConfig("stimulusColor", "str")
+        self.f9CommunicationEnabled = self.getAppConfig("f9CommunicationEnabled", "str")
         self.NiDaqPulseEnabled = self.getAppConfig("NiDaqPulseEnabled", "str")
         self.DishRadiusSize = self.getAppConfig("DishRadiusSize")
         self.VirtualScreenDegrees = self.getAppConfig("VirtualScreenDegrees")
@@ -52,7 +51,7 @@ class App:
         self.deltaY = 0
 
         self.positionDegreesToVSTable = []
-        self.calcConvertPositionToPixelsTable() # populate the above table
+        self.calcConvertPositionToPixelsTable()  # populate the above table
 
         if self.NiDaqPulseEnabled.lower() == "on":
             # try to add channel
@@ -71,8 +70,8 @@ class App:
             self.f9CommunicationEnabled = False
         logging.info("f9CommunicationEnabled=" + str(self.f9CommunicationEnabled))
         self.printVirtualScreenData()
-        self.screen_width = int(screen.winfo_screenwidth()/4)
-        self.screen_height = int(screen.winfo_screenheight()/4)
+        self.screen_width = int(screen.winfo_screenwidth() / 4)
+        self.screen_height = int(screen.winfo_screenheight() / 4)
         screen.geometry(self.calcGeometry(self.screen_width, self.screen_height))
         self.canvas = Canvas(screen, background="black")
         self.textVar = tkinter.StringVar()
@@ -236,17 +235,17 @@ class App:
         self.canvas.delete(self.yHorizental)
         self.canvas.delete(self.yVertical)
 
-    def createMidScreen(self,width,height):
+    def createMidScreen(self, width, height):
 
-        self.yVertical = self.canvas.create_line(width/2, 0,
-                                                 width /2, height,
-                                                fill=constants.FILL_COLOR,
-                                                width=constants.THIN_LINE_WIDTH)
-
-        self.yHorizental = self.canvas.create_line(0, height / 2,
-                                                width, height / 2,
+        self.yVertical = self.canvas.create_line(width / 2, 0,
+                                                 width / 2, height,
                                                  fill=constants.FILL_COLOR,
                                                  width=constants.THIN_LINE_WIDTH)
+
+        self.yHorizental = self.canvas.create_line(0, height / 2,
+                                                   width, height / 2,
+                                                   fill=constants.FILL_COLOR,
+                                                   width=constants.THIN_LINE_WIDTH)
 
     def createCross(self):
         self.xBoundry = self.canvas.create_rectangle(self.vsX - 10, self.vsY - 10, self.vsX + self.vsWidth + 10,
@@ -327,7 +326,7 @@ class App:
             self.debug = True
             self.label.grid()
 
-    def get_monitors_dimensions(self,monitor_number):
+    def get_monitors_dimensions(self, monitor_number):
         monitors = []
         for m in get_monitors():
             print(f'monitor = {m}')
@@ -342,7 +341,7 @@ class App:
                 v = 500 - 500 * sin(radians(d)) * cos(radians(d / 2)) / sin(radians(90 - d / 2))
             else:
                 d = i - 90
-                v = 500+500 * sin(radians(d)) * cos(radians(d / 2)) / sin(radians(90 - d / 2))
+                v = 500 + 500 * sin(radians(d)) * cos(radians(d / 2)) / sin(radians(90 - d / 2))
             self.positionDegreesToVSTable.append(v)
 
 

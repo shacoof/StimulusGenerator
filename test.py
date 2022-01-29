@@ -1,7 +1,4 @@
-import time
-time1 = time.time()
-time.sleep(1)
-time2 = time.time()
-print(time1)
-print(time2)
-print (f'time diff is {time2-time1}')
+from math import sin, radians
+
+for alpha in range(0,91):
+    print(f"{alpha} = {(sin(radians(90-alpha))*sin(radians(45 -alpha/2)))/sin(radians(90 + alpha)/2)}")
