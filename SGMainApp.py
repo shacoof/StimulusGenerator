@@ -15,6 +15,10 @@ class App:
     sg = ""
 
     def __init__(self, screen):
+        # these 3 are for ni-daq output (port & line it's connected to, device is initialized later)
+        self.port = 1
+        self.line = 7
+        self.output_device = None
         self.debug = False
         self.controlMode = "l"  # l = location, s = size
         # user by the x (cross) button to show virtual screen cross
