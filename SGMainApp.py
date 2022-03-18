@@ -9,12 +9,23 @@ from math import pi, sin, cos, radians
 import sys
 from StimuliGenerator import *
 import constants
+import multiprocessing
+import SaveToAvi
 
+
+#TODO initiate camera aquisition at the begining and stop acquisition at the end
+#TODO create 2 CSV files on both Acquisition process and this process  to help sync timestamps
+#    - this process for each stimuli
+#    - acqusition process - accept signal when stimulus starts and record the frame
 
 class App:
     sg = ""
 
-    def __init__(self, screen):
+    def __init__(self, screen, camera, queue):
+
+        self.camera = camera
+        self.queue = queue
+
         # these 3 are for ni-daq output (port & line it's connected to, device is initialized later)
         self.port = 1
         self.line = 7
@@ -74,9 +85,11 @@ class App:
             self.f9CommunicationEnabled = False
         logging.info("f9CommunicationEnabled=" + str(self.f9CommunicationEnabled))
         self.printVirtualScreenData()
-        self.screen_width = int(screen.winfo_screenwidth() / 4)
-        self.screen_height = int(screen.winfo_screenheight() / 4)
-        screen.geometry(self.calcGeometry(self.screen_width, self.screen_height))
+
+        # presenting on the projector in maximize mode
+        monitor = self.get_monitors_dimensions(self.projectorOnMonitor)
+        screen.geometry(f"{monitor['width']}x{monitor['height']}+{screen.winfo_screenwidth()}+0")
+
         self.canvas = Canvas(screen, background="black")
         self.textVar = tkinter.StringVar()
         self.label = ttk.Label(self.canvas, textvariable=self.textVar)
@@ -174,10 +187,11 @@ class App:
                 self.sg.terminate_run()
         elif event.keysym == constants.RUN:
             self.state = constants.RUN
-            self.sg = StimulusGenerator(self.canvas, self, self.output_device)
+            self.camera.start()
+            self.sg = StimulusGenerator(self.canvas, self, self.output_device, self.queue)
             self.runStimuli()
 
-    def runStimuli(self):  # this is main loop of stimulus
+    def runStimuli(self):  # this is main loop of sxtimulus
         if self.state == constants.PAUSE:
             return
         if self.sg.run_stimuli() == constants.DONE:  # call specific stim list
@@ -349,8 +363,14 @@ class App:
             self.positionDegreesToVSTable.append(v)
 
 
-logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
+if __name__ == '__main__':
+    logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
 
-root = Tk()
-app = App(root)
-root.mainloop()
+    queue = multiprocessing.Queue()
+    camera = multiprocessing.Process(name='camera_control_worker',
+                                     target=SaveToAvi.camera_control_worker,
+                                     args=(queue,))
+
+    root = Tk()
+    app = App(root, camera, queue)
+    root.mainloop()

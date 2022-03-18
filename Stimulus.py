@@ -200,8 +200,8 @@ class Stimulus:
         adjusted_radius = self.currRadius * \
                           (1-((sin(radians(90-alpha))*sin(radians(45 -alpha/2)))/sin(radians(90 + alpha)/2)))
 
-        logging.debug(f"current_radius={self.currRadius}, adjusted_radius={adjusted_radius}, "
-                      f"current_degree={self.current_degree} ")
+        """logging.debug(f"current_radius={self.currRadius}, adjusted_radius={adjusted_radius}, "
+                      f"current_degree={self.current_degree} ")"""
 
         #is it time to move the shape, small changes (eliminate by trunc) will not cause redraw
         #if  (trunc(self.shapeX) != x0 or

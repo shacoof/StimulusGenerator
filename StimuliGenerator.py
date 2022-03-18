@@ -3,9 +3,11 @@ from Stimulus import *
 from constants import *
 
 
+
 class StimulusGenerator:
 
-    def __init__(self, canvas, app, output_device=None):
+    def __init__(self, canvas, app, output_device=None, queue=None):
+        self.queue = queue
         self.output_device = output_device
         self.batchNo = 0
         self.canvas = canvas
@@ -39,6 +41,8 @@ class StimulusGenerator:
 
         # if we reached the end we are done with this run 
         if i >= len(self.stimulusObjList):
+            self.queue.put('exit')
+            print('EXIT SENT ')
             return DONE
 
         s = ""
@@ -65,6 +69,7 @@ class StimulusGenerator:
         if not found and i < len(self.stimulusObjList):
             self.batchNo += 1
             self.stimulusObjList[i].init_shape(self.batchNo)
+            self.queue.put(i)
             i += 1
             # adding all subsequent WITH stimulus to the current one
             while i < len(self.stimulusObjList) and self.stimulusObjList[i].startMode.lower() == WITH:

@@ -3,20 +3,28 @@ import socket
 import time
 import logging
 
+
 def loadCSV(csvFileName):
     with open(csvFileName, mode='r') as infile:
         reader = csv.DictReader(infile)
-        result=[]
+        result = []
         for row in reader: 
             result.append(row)
         #print({rows[0]:rows[1] for rows in reader})
         return result
+
 
 def writeCSV(csvFileName,dict):
     with open(csvFileName, 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=dict.keys())
         writer.writeheader()
         writer.writerow(dict)
+
+
+def array_to_csv(csv_file_name, arr):
+    with open(csv_file_name, 'w', newline='') as file:
+        my_writer = csv.writer(file, delimiter=',')
+        my_writer.writerows(arr)
 
 def sendF9Marker():
     HOST = '132.64.105.40'  # The IP address of the streams-7 macing, can be obtained using ipconfig 
