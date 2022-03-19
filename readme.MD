@@ -25,6 +25,13 @@ f9CommunicationEnabled - if on then we try to communicate with a server running 
 DishRadiusSize = the radius of the fish-dish (mm), used for calculaiton of degress / object size / speed 
 VirtualScreenDegrees = how many (out of 360 degress) the virtual screen is taking. speed is measured in degrees per second. 
 VirtualScreenWidthActualSize = the size in mm of the VirtualScreen,  it is circa 2*pi*DishRadiusSize/2 but we don't caluclate it to allow flexability as the virtual screen captures less than 1/2 
+backgroundColor
+virtualScreenColor
+stimulusColor
+VirtualScreenHeightActualSize
+NiDaqPulseEnabled = ON|OFF. if ON we send evetns to the computers that capture the microscope data, we send event at the begining of each STIMULUS
+projectorOnMonitor = 0|1|2 the number of the monitor that is the projector, e.g. what the fish sees. Controls where we project the Stimulus
+cameraControl = ON|OFF. if ON then camera is activated and capturing video 
 
 stimulusConfig.csv
 The coordinates of the virtual screen are between 0-999. top left corenr is (0,0)

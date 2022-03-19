@@ -69,7 +69,8 @@ class StimulusGenerator:
         if not found and i < len(self.stimulusObjList):
             self.batchNo += 1
             self.stimulusObjList[i].init_shape(self.batchNo)
-            self.queue.put(i)
+            if self.app.camera_control.lower() == "on":
+                self.queue.put(i)
             i += 1
             # adding all subsequent WITH stimulus to the current one
             while i < len(self.stimulusObjList) and self.stimulusObjList[i].startMode.lower() == WITH:

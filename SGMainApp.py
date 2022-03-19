@@ -11,6 +11,7 @@ from StimuliGenerator import *
 import constants
 import multiprocessing
 import SaveToAvi
+import datetime
 
 
 #TODO initiate camera aquisition at the begining and stop acquisition at the end
@@ -21,11 +22,7 @@ import SaveToAvi
 class App:
     sg = ""
 
-    def __init__(self, screen, camera, queue):
-
-        self.camera = camera
-        self.queue = queue
-
+    def __init__(self, screen):
         # these 3 are for ni-daq output (port & line it's connected to, device is initialized later)
         self.port = 1
         self.line = 7
@@ -61,6 +58,7 @@ class App:
         self.VirtualScreenWidthActualSize = self.getAppConfig("VirtualScreenWidthActualSize")
         self.VirtualScreenHeightActualSize = self.getAppConfig("VirtualScreenHeightActualSize")
         self.projectorOnMonitor = self.getAppConfig("projectorOnMonitor")
+        self.camera_control = self.getAppConfig("cameraControl", "str")
 
         self.deltaX = 0
         self.deltaY = 0
@@ -68,6 +66,19 @@ class App:
         self.positionDegreesToVSTable = []
         self.calcConvertPositionToPixelsTable()  # populate the above table
 
+        if self.camera_control.lower() == "on":
+            # get experiment prefix for file names etc.
+            file_prefix = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            name_temp = input(f"Enter experiment prefix for file names [{file_prefix}]: ")
+            if name_temp != '':
+                file_prefix = name_temp
+
+            self.queue = multiprocessing.Queue()
+            self.camera = multiprocessing.Process(name='camera_control_worker',
+                                             target=SaveToAvi.camera_control_worker,
+                                             args=(self.queue, file_prefix))
+
+        screen.focus_force()
         if self.NiDaqPulseEnabled.lower() == "on":
             # try to add channel
             try:
@@ -364,13 +375,8 @@ class App:
 
 
 if __name__ == '__main__':
+
     logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
-
-    queue = multiprocessing.Queue()
-    camera = multiprocessing.Process(name='camera_control_worker',
-                                     target=SaveToAvi.camera_control_worker,
-                                     args=(queue,))
-
     root = Tk()
-    app = App(root, camera, queue)
+    app = App(root)
     root.mainloop()
