@@ -71,16 +71,11 @@ class App:
         self.camera = None
         if self.camera_control.lower() == "on":
             # get experiment prefix for file names etc.
-            file_prefix = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-            name_temp = input(f"Enter experiment prefix for file names [{file_prefix}]: ")
-            if name_temp != '':
-                file_prefix = name_temp
-
-            while not utils.create_directory(file_prefix):
-                file_prefix = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-                name_temp = input(f"Name already used, Enter experiment prefix for file names [{file_prefix}]: ")
-                if name_temp != '':
-                    file_prefix = name_temp
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            fish_name = input(f"Enter fish name: ")
+            file_prefix = f"{timestamp}_{fish_name}"
+            while fish_name == '' or not utils.create_directory(f"{file_prefix}"):
+                fish_name = input(f"Fish name must be unique and not empty: ")
 
             self.queue = multiprocessing.Queue()
             self.camera = multiprocessing.Process(name='camera_control_worker',
