@@ -41,8 +41,9 @@ class StimulusGenerator:
 
         # if we reached the end we are done with this run 
         if i >= len(self.stimulusObjList):
-            self.queue.put('exit')
-            print('EXIT SENT ')
+            if self.queue:
+                self.queue.put('exit')
+                print('EXIT SENT ')
             return DONE
 
         s = ""

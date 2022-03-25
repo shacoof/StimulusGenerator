@@ -2,6 +2,7 @@ import csv
 import socket
 import time
 import logging
+import os
 
 
 def loadCSV(csvFileName):
@@ -26,6 +27,7 @@ def array_to_csv(csv_file_name, arr):
         my_writer = csv.writer(file, delimiter=',')
         my_writer.writerows(arr)
 
+
 def sendF9Marker():
     HOST = '132.64.105.40'  # The IP address of the streams-7 macing, can be obtained using ipconfig 
     PORT = 65432        # The port used by the server
@@ -40,3 +42,25 @@ def sendF9Marker():
         tsEnd=time.time()
         logging.debug(f'Comm round trip was {(tsEnd-tsStart)*1000} ms')
         #logging.info ("Marker sent !")
+
+
+def create_directory(dir_name):
+        """
+
+        Args:
+            dir_name: the name of the directory to be created
+
+        Returns:
+            nothing
+
+        """
+
+        # Check whether the specified path exists or not
+        isExist = os.path.exists(dir_name)
+
+        if not isExist:
+            # Create a new directory because it does not exist
+            os.makedirs(dir_name)
+            return True
+        else:
+            return False

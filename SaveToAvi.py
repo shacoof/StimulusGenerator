@@ -133,7 +133,7 @@ def save_list_to_avi(nodemap, nodemap_tldevice, images):
 
         if chosenAviType == AviType.UNCOMPRESSED:
             #avi_filename = 'SaveToAvi-Uncompressed-%s' % device_serial_number
-            avi_filename = f"{file_prefix}-Uncompressed"
+            avi_filename = f"{file_prefix}\\{file_prefix}-Uncompressed"
 
             option = PySpin.AVIOption()
             option.frameRate = framerate_to_set
@@ -142,7 +142,7 @@ def save_list_to_avi(nodemap, nodemap_tldevice, images):
 
         elif chosenAviType == AviType.MJPG:
             #avi_filename = 'SaveToAvi-MJPG-%s' % device_serial_number
-            avi_filename = f"{file_prefix}-MJPG"
+            avi_filename = f"{file_prefix}\\{file_prefix}-MJPG"
             option = PySpin.MJPGOption()
             option.frameRate = framerate_to_set
             option.quality = 75
@@ -151,7 +151,7 @@ def save_list_to_avi(nodemap, nodemap_tldevice, images):
 
         elif chosenAviType == AviType.H264:
             #avi_filename = 'SaveToAvi-H264-%s' % device_serial_number
-            avi_filename = f"{file_prefix}-H264"
+            avi_filename = f"{file_prefix}\\{file_prefix}-H264"
             option = PySpin.H264Option()
             option.frameRate = framerate_to_set
             option.bitrate = 1000000
@@ -297,7 +297,7 @@ def acquire_images(cam, nodemap):
                         msg = queue.get()
                         if msg == 'exit':
                             print(f"message = {msg}")
-                            utils.array_to_csv(f'{file_prefix}_log.csv', image_array)
+                            utils.array_to_csv(f'{file_prefix}\\{file_prefix}_log.csv', image_array)
                         else:
                             image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), i, msg])
 

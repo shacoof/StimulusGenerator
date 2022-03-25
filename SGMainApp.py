@@ -3,6 +3,8 @@ from tkinter import ttk
 from tkinter.ttk import tkinter
 from screeninfo import get_monitors
 import nidaqmx
+
+import utils
 from NiDaqPulse import NiDaqPulse
 from utils import loadCSV, writeCSV, sendF9Marker
 from math import pi, sin, cos, radians
@@ -14,10 +16,10 @@ import SaveToAvi
 import datetime
 
 
-#TODO initiate camera aquisition at the begining and stop acquisition at the end
-#TODO create 2 CSV files on both Acquisition process and this process  to help sync timestamps
-#    - this process for each stimuli
-#    - acqusition process - accept signal when stimulus starts and record the frame
+#TODO mid x doesn't appear in the right place
+#TODO allow re-run - new file prefix
+#TODO allow pause, run after pause is re-run
+#TODO lose focuse at the end of the run... maybe because of print ?
 
 class App:
     sg = ""
@@ -65,13 +67,20 @@ class App:
 
         self.positionDegreesToVSTable = []
         self.calcConvertPositionToPixelsTable()  # populate the above table
-
+        self.queue = None
+        self.camera = None
         if self.camera_control.lower() == "on":
             # get experiment prefix for file names etc.
             file_prefix = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             name_temp = input(f"Enter experiment prefix for file names [{file_prefix}]: ")
             if name_temp != '':
                 file_prefix = name_temp
+
+            while not utils.create_directory(file_prefix):
+                file_prefix = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+                name_temp = input(f"Name already used, Enter experiment prefix for file names [{file_prefix}]: ")
+                if name_temp != '':
+                    file_prefix = name_temp
 
             self.queue = multiprocessing.Queue()
             self.camera = multiprocessing.Process(name='camera_control_worker',
@@ -143,6 +152,9 @@ class App:
         logging.info("Bye bye !")
         if self.output_device is not None:
             self.output_device.stop()
+        if self.camera:
+            self.queue.put('exit')
+            self.camera.join()
         sys.exit()
 
     def printHelp(self, event):
@@ -196,9 +208,15 @@ class App:
             self.state = constants.PAUSE
             if self.sg != "":
                 self.sg.terminate_run()
+            if self.camera:
+                self.queue.put('exit')
+                print('EXIT SENT ')
+                self.camera.join()
+                self.camera = None  # this will all restart
         elif event.keysym == constants.RUN:
             self.state = constants.RUN
-            self.camera.start()
+            if self.camera:
+                self.camera.start()
             self.sg = StimulusGenerator(self.canvas, self, self.output_device, self.queue)
             self.runStimuli()
 
@@ -209,6 +227,7 @@ class App:
             logging.info("All stimuli were executed ! ")
             self.setDebugText("Done")
             self.state = constants.PAUSE
+            self.camera = None  # to allow re-run
         else:
             self.canvas.after(constants.SLEEP_TIME, self.runStimuli)
 
