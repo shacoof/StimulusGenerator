@@ -16,7 +16,12 @@ import SaveToAvi
 import datetime
 
 
-#TODO mid x doesn't appear in the right place
+#TODO Bug with O and P (exit and pause)
+#
+
+#TODO live image during recording
+#TODO automatically close/start new file after 30min
+#TODO save format MP4 , see save_list_to_avi
 #TODO allow re-run - new file prefix
 #TODO allow pause, run after pause is re-run
 #TODO lose focuse at the end of the run... maybe because of print ?
@@ -61,6 +66,7 @@ class App:
         self.VirtualScreenHeightActualSize = self.getAppConfig("VirtualScreenHeightActualSize")
         self.projectorOnMonitor = self.getAppConfig("projectorOnMonitor")
         self.camera_control = self.getAppConfig("cameraControl", "str")
+        self.data_path = self.getAppConfig("data_path", "str")
 
         self.deltaX = 0
         self.deltaY = 0
@@ -73,14 +79,18 @@ class App:
             # get experiment prefix for file names etc.
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             fish_name = input(f"Enter fish name: ")
+            #TODO add here path from appconfig to be part of the prefix
             file_prefix = f"{timestamp}_{fish_name}"
-            while fish_name == '' or not utils.create_directory(f"{file_prefix}"):
+            self.data_path = f"{self.data_path}\\{file_prefix}"
+            while fish_name == '' or not utils.create_directory(f"{self.data_path}"):
                 fish_name = input(f"Fish name must be unique and not empty: ")
+                file_prefix = f"{timestamp}_{fish_name}"
+                self.data_path = f"{self.data_path}\\{file_prefix}"
 
             self.queue = multiprocessing.Queue()
             self.camera = multiprocessing.Process(name='camera_control_worker',
                                              target=SaveToAvi.camera_control_worker,
-                                             args=(self.queue, file_prefix))
+                                             args=(self.queue, self.data_path, file_prefix))
 
         screen.focus_force()
         if self.NiDaqPulseEnabled.lower() == "on":
