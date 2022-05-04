@@ -3,6 +3,7 @@ from tkinter import ttk
 from tkinter.ttk import tkinter
 from screeninfo import get_monitors
 import nidaqmx
+import shutil
 
 import utils
 from NiDaqPulse import NiDaqPulse
@@ -16,10 +17,8 @@ import SaveToAvi
 import datetime
 
 
-#TODO Bug with O and P (exit and pause)
-#
-
 #TODO live image during recording
+#TODO Bug with O and P (exit and pause)
 #TODO automatically close/start new file after 30min
 #TODO save format MP4 , see save_list_to_avi
 #TODO allow re-run - new file prefix
@@ -79,7 +78,6 @@ class App:
             # get experiment prefix for file names etc.
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             fish_name = input(f"Enter fish name: ")
-            #TODO add here path from appconfig to be part of the prefix
             file_prefix = f"{timestamp}_{fish_name}"
             self.data_path = f"{self.data_path}\\{file_prefix}"
             while fish_name == '' or not utils.create_directory(f"{self.data_path}"):
@@ -87,6 +85,7 @@ class App:
                 file_prefix = f"{timestamp}_{fish_name}"
                 self.data_path = f"{self.data_path}\\{file_prefix}"
 
+            shutil.copyfile(constants.APP_CONFIG_FILE, f"{self.data_path}\\{constants.APP_CONFIG_FILE}")
             self.queue = multiprocessing.Queue()
             self.camera = multiprocessing.Process(name='camera_control_worker',
                                              target=SaveToAvi.camera_control_worker,

@@ -32,6 +32,7 @@ VirtualScreenHeightActualSize
 NiDaqPulseEnabled = ON|OFF. if ON we send evetns to the computers that capture the microscope data, we send event at the begining of each STIMULUS
 projectorOnMonitor = 0|1|2 the number of the monitor that is the projector, e.g. what the fish sees. Controls where we project the Stimulus
 cameraControl = ON|OFF. if ON then camera is activated and capturing video 
+data_path = location where the files will be saved use double \\ for directory path, e.g. C:\\Data
 
 stimulusConfig.csv
 The coordinates of the virtual screen are between 0-999. top left corenr is (0,0)

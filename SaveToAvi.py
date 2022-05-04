@@ -132,7 +132,7 @@ def save_list_to_avi(nodemap, nodemap_tldevice, images):
         avi_recorder = PySpin.SpinVideo()
 
         if chosenAviType == AviType.UNCOMPRESSED:
-            #avi_filename = 'SaveToAvi-Uncompressed-%s' % device_serial_number
+            # avi_filename = 'SaveToAvi-Uncompressed-%s' % device_serial_number
             avi_filename = f"{data_path}\\{file_prefix}-Uncompressed"
 
             option = PySpin.AVIOption()
@@ -141,7 +141,7 @@ def save_list_to_avi(nodemap, nodemap_tldevice, images):
             option.width = images[0].GetWidth()
 
         elif chosenAviType == AviType.MJPG:
-            #avi_filename = 'SaveToAvi-MJPG-%s' % device_serial_number
+            # avi_filename = 'SaveToAvi-MJPG-%s' % device_serial_number
             avi_filename = f"{data_path}\\{file_prefix}-MJPG"
             option = PySpin.MJPGOption()
             option.frameRate = framerate_to_set
@@ -150,7 +150,7 @@ def save_list_to_avi(nodemap, nodemap_tldevice, images):
             option.width = images[0].GetWidth()
 
         elif chosenAviType == AviType.H264:
-            #avi_filename = 'SaveToAvi-H264-%s' % device_serial_number
+            # avi_filename = 'SaveToAvi-H264-%s' % device_serial_number
             avi_filename = f"{data_path}\\{file_prefix}-H264"
             option = PySpin.H264Option()
             option.frameRate = framerate_to_set
@@ -170,10 +170,9 @@ def save_list_to_avi(nodemap, nodemap_tldevice, images):
         # Although the video file has been opened, images must be individually
         # appended in order to construct the video.
         print('Appending %d images to AVI file: %s.avi...' % (len(images), avi_filename))
-
         for i in range(len(images)):
             avi_recorder.Append(images[i])
-            print('Appended image %d...' % i)
+        print(f"{len(images)} images appended")
 
         # Close AVI file
         #
@@ -278,6 +277,7 @@ def acquire_images(cam, nodemap):
         fig.canvas.mpl_connect('close_event', handle_close)
         i = 0
         msg = 'stay'
+        print(f"Taking images, will report every 100 images")
         while msg != 'exit':
             try:
                 #  Retrieve next received image
@@ -321,13 +321,13 @@ def acquire_images(cam, nodemap):
 
                     #  Release image
                     image_result.Release()
-                    print(f'image taken {i}')
-                    i+=1
-
-
+                    if i % 100 == 0:
+                        print(f"{i} images taken")
+                    i += 1
             except PySpin.SpinnakerException as ex:
                 print('Error: %s' % ex)
                 result = False
+        print(f"{i} images taken")
 
         # End acquisition
         cam.EndAcquisition()
