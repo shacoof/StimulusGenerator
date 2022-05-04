@@ -47,7 +47,7 @@ class AviType:
     H264 = 2
 
 
-chosenAviType = AviType.MJPG  # change me!
+chosenAviType = AviType.UNCOMPRESSED  # change me!
 NUM_IMAGES = 180  # 00000  # number of images to use in AVI file
 
 global continue_recording
@@ -172,6 +172,8 @@ def save_list_to_avi(nodemap, nodemap_tldevice, images):
         print('Appending %d images to AVI file: %s.avi...' % (len(images), avi_filename))
         for i in range(len(images)):
             avi_recorder.Append(images[i])
+            if i % 100 == 0:
+                print(f"Images appended {i}")
         print(f"{len(images)} images appended")
 
         # Close AVI file
@@ -273,6 +275,7 @@ def acquire_images(cam, nodemap):
         # Figure(1) is default so you can omit this line. Figure(0) will create a new window every time program hits this line
         fig = plt.figure(1)
 
+
         # Close the GUI when close event happens
         fig.canvas.mpl_connect('close_event', handle_close)
         i = 0
@@ -304,17 +307,18 @@ def acquire_images(cam, nodemap):
                     # Getting the image data as a numpy array
                     image_data = image_result.GetNDArray()
 
-                    """ Think later what to do with this  
-                    if (i % 10 != 0):
+                    # the below responsible for the live video
+                    if (i % 10 == 0):
                         # Draws an image on the current figure
                         plt.imshow(image_data, cmap='gray')
+                        plt.axis('off')
 
                         # Interval in plt.pause(interval) determines how fast the images are displayed in a GUI
                         # Interval is in seconds.
                         plt.pause(0.001)
 
                         # Clear current reference of a figure. This will improve display speed significantly
-                        plt.clf()"""
+                        plt.clf()
 
                     #  Convert image to mono 8 and append to list
                     images.append(image_result.Convert(PySpin.PixelFormat_Mono8, PySpin.HQ_LINEAR))

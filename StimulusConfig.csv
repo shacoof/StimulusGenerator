@@ -1,6 +1,6 @@
 exitCriteria,startX,startY,endX,endY,repetitions,fastSpeed,slowSpeed,startShapeRadius,endShapeRadius,fastDuration,slowDuration,startMode,delay,duration,xType
-Time,10,600,170,600,1,0,0,8,8,500,500,After,0,2000,degrees
-spacer,30,600,30,600,1,0,0,8,8,500,500,After,0,2000,degrees
-Time,10,600,10,600,1,0,0,8,8,500,500,After,0,2000,degrees
-spacer,30,600,30,600,1,0,0,8,8,500,500,After,0,2000,degrees
-Time,30,600,30,600,1,0,0,8,8,500,500,After,0,2000,degrees
+Time,10,600,170,600,1,0,0,8,8,500,500,After,0,4000,degrees
+spacer,30,600,30,600,1,0,0,8,8,500,500,After,0,4000,degrees
+Time,10,600,10,600,1,0,0,8,8,500,500,After,0,4000,degrees
+spacer,30,600,30,600,1,0,0,8,8,500,500,After,0,4000,degrees
+Time,30,600,30,600,1,0,0,8,8,500,500,After,0,4000,degrees

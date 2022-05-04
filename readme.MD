@@ -33,6 +33,7 @@ NiDaqPulseEnabled = ON|OFF. if ON we send evetns to the computers that capture t
 projectorOnMonitor = 0|1|2 the number of the monitor that is the projector, e.g. what the fish sees. Controls where we project the Stimulus
 cameraControl = ON|OFF. if ON then camera is activated and capturing video 
 data_path = location where the files will be saved use double \\ for directory path, e.g. C:\\Data
+split_files = in seconds, controls splitting files frequency to avoid program crash 
 
 stimulusConfig.csv
 The coordinates of the virtual screen are between 0-999. top left corenr is (0,0)

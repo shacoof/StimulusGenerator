@@ -1,3 +1,4 @@
+import time
 from tkinter import Canvas, Tk, BOTH
 from tkinter import ttk
 from tkinter.ttk import tkinter
@@ -7,8 +8,8 @@ import shutil
 
 import utils
 from NiDaqPulse import NiDaqPulse
-from utils import loadCSV, writeCSV, sendF9Marker
-from math import pi, sin, cos, radians
+from utils import writeCSV
+from math import pi, cos
 import sys
 from StimuliGenerator import *
 import constants
@@ -17,9 +18,8 @@ import SaveToAvi
 import datetime
 
 
-#TODO live image during recording
-#TODO Bug with O and P (exit and pause)
 #TODO automatically close/start new file after 30min
+#TODO Bug with O and P (exit and pause)
 #TODO save format MP4 , see save_list_to_avi
 #TODO allow re-run - new file prefix
 #TODO allow pause, run after pause is re-run
@@ -30,6 +30,7 @@ class App:
 
     def __init__(self, screen):
         # these 3 are for ni-daq output (port & line it's connected to, device is initialized later)
+        self.state = None
         self.port = 1
         self.line = 7
         self.output_device = None
@@ -66,6 +67,8 @@ class App:
         self.projectorOnMonitor = self.getAppConfig("projectorOnMonitor")
         self.camera_control = self.getAppConfig("cameraControl", "str")
         self.data_path = self.getAppConfig("data_path", "str")
+        self.split_rate = self.getAppConfig("split_rate")
+        self.run_start_time = None
 
         self.deltaX = 0
         self.deltaY = 0
@@ -85,7 +88,7 @@ class App:
                 file_prefix = f"{timestamp}_{fish_name}"
                 self.data_path = f"{self.data_path}\\{file_prefix}"
 
-            shutil.copyfile(constants.APP_CONFIG_FILE, f"{self.data_path}\\{constants.APP_CONFIG_FILE}")
+            shutil.copyfile(constants.STIMULUS_CONFIG, f"{self.data_path}\\{constants.STIMULUS_CONFIG}")
             self.queue = multiprocessing.Queue()
             self.camera = multiprocessing.Process(name='camera_control_worker',
                                              target=SaveToAvi.camera_control_worker,
@@ -94,12 +97,14 @@ class App:
         screen.focus_force()
         if self.NiDaqPulseEnabled.lower() == "on":
             # try to add channel
+            task = None
             try:
                 task = NiDaqPulse(device_name="Dev2/port{0}/line{1}".format(self.port, self.line))
                 self.output_device = task
             except nidaqmx.DaqError as e:
                 print(e)
-                task.stop()
+                if task:
+                    task.stop()
         else:
             self.output_device = None
 
@@ -218,21 +223,27 @@ class App:
                 self.camera.join()
                 self.camera = None  # this will all restart
         elif event.keysym == constants.RUN:
+            self.run_start_time = time.time()
             self.state = constants.RUN
             if self.camera:
                 self.camera.start()
             self.sg = StimulusGenerator(self.canvas, self, self.output_device, self.queue)
             self.runStimuli()
 
-    def runStimuli(self):  # this is main loop of sxtimulus
+    def runStimuli(self):  # this is main loop of stimulus
         if self.state == constants.PAUSE:
             return
-        if self.sg.run_stimuli() == constants.DONE:  # call specific stim list
+        if self.sg.run_stimuli() == constants.DONE:  # call specific stimuli list
             logging.info("All stimuli were executed ! ")
             self.setDebugText("Done")
             self.state = constants.PAUSE
             self.camera = None  # to allow re-run
         else:
+
+            if time.time() - self.run_start_time > self.split_rate:
+                self.run_start_time = time.time()
+                print(f"we need to split")
+
             self.canvas.after(constants.SLEEP_TIME, self.runStimuli)
 
     def calcGeometry(self, screen_width, screen_height):
