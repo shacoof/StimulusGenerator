@@ -89,8 +89,8 @@ class App:
                 self.data_path = f"{self.data_path}\\{file_prefix}"
 
             shutil.copyfile(constants.STIMULUS_CONFIG, f"{self.data_path}\\{constants.STIMULUS_CONFIG}")
-            self.queue = multiprocessing.Queue()
-            self.camera = multiprocessing.Process(name='camera_control_worker',
+            self.queue = multiprocessing.Queue()  # communication queue to the worker
+            self.camera = multiprocessing.Process(name='camera_control_worker',       # Creation of the worker
                                              target=SaveToAvi.camera_control_worker,
                                              args=(self.queue, self.data_path, file_prefix))
 

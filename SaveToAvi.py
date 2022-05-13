@@ -31,7 +31,9 @@ import time
 import datetime
 import matplotlib.pyplot as plt
 import utils
-
+import cv2
+import glob
+import os
 # this array of arrays is used to create a log of which frame was captured at the time of stimulus event
 # see NUM_IMAGES
 # each item is [timestamp, frame-number, stimulus-message ]
@@ -275,25 +277,28 @@ def acquire_images(cam, nodemap):
         # Figure(1) is default so you can omit this line. Figure(0) will create a new window every time program hits this line
         fig = plt.figure(1)
 
-
         # Close the GUI when close event happens
         fig.canvas.mpl_connect('close_event', handle_close)
         i = 0
         msg = 'stay'
         print(f"Taking images, will report every 100 images")
+
+        # setting parameters to the JPEG coder
+        op = PySpin.JPEGOption()
+        op.quality = 75
+
+        # taking one image just to get the w/h
+        image_result = cam.GetNextImage(1000)
+        width = image_result.GetWidth()
+        height = image_result.GetHeight()
+        t1 = time.time()
         while msg != 'exit':
             try:
-                #  Retrieve next received image
-                image_result = cam.GetNextImage(1000)
-
                 #  Ensure image completion
                 if image_result.IsIncomplete():
                     print('Image incomplete with image status %d...' % image_result.GetImageStatus())
-
                 else:
                     #  Print image information; height and width recorded in pixels
-                    width = image_result.GetWidth()
-                    height = image_result.GetHeight()
                     # print('Grabbed Image %d, width = %d, height = %d' % (i, width, height))
                     # print(f"current time:-{datetime.datetime.now()}")
                     if queue.qsize() > 0:
@@ -305,10 +310,10 @@ def acquire_images(cam, nodemap):
                             image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), i, msg])
 
                     # Getting the image data as a numpy array
-                    image_data = image_result.GetNDArray()
-
+                    # image_data = image_result.GetNDArray()
+                    # out.write(image_data)
                     # the below responsible for the live video
-                    if (i % 10 == 0):
+                    """if (i % 10 == 0):
                         # Draws an image on the current figure
                         plt.imshow(image_data, cmap='gray')
                         plt.axis('off')
@@ -318,20 +323,22 @@ def acquire_images(cam, nodemap):
                         plt.pause(0.001)
 
                         # Clear current reference of a figure. This will improve display speed significantly
-                        plt.clf()
+                        plt.clf()"""
 
                     #  Convert image to mono 8 and append to list
-                    images.append(image_result.Convert(PySpin.PixelFormat_Mono8, PySpin.HQ_LINEAR))
-
-                    #  Release image
+                    # images.append(image_result.Convert(PySpin.PixelFormat_Mono8, PySpin.HQ_LINEAR))
+                    image_result.Save(f"{data_path}\\img{i}.jpeg", op)
                     image_result.Release()
-                    if i % 100 == 0:
-                        print(f"{i} images taken")
                     i += 1
+                    #  Retrieve next received image
+                    image_result = cam.GetNextImage(1000)
             except PySpin.SpinnakerException as ex:
                 print('Error: %s' % ex)
                 result = False
-        print(f"{i} images taken")
+
+        delta = time.time() - t1
+        print(f"{i} images taken in {delta} sec , frames per sec {i/delta}")
+        opencv_create_video(file_prefix, height, width)
 
         # End acquisition
         cam.EndAcquisition()
@@ -341,6 +348,25 @@ def acquire_images(cam, nodemap):
         result = False
 
     return result, images
+
+
+def opencv_create_video(file_prefix, height, width):
+    img_array = []
+    i = 0
+    frame_rate = 30
+    size = (width, height)
+    out = cv2.VideoWriter(f'{data_path}\\{file_prefix}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), frame_rate, (width, height))
+
+    print("create video in progress, will report every 1000 files")
+    for filename in glob.glob(f'{data_path}\\*.jpeg'):
+        img = cv2.imread(filename)
+        out.write(img)
+        os.remove(filename)
+        i = i + 1
+        if i % 1000 == 0:
+            print(f'{i} images processed')
+
+    out.release()
 
 
 def run_single_camera(cam):
@@ -373,7 +399,8 @@ def run_single_camera(cam):
         if err < 0:
             return err
 
-        result &= save_list_to_avi(nodemap, nodemap_tldevice, images)
+        # now that we save images to the disk we don't need that
+        # result &= save_list_to_avi(nodemap, nodemap_tldevice, images)
 
         # Deinitialize camera
         cam.DeInit()
