@@ -16,7 +16,7 @@
 # THIS SOFTWARE OR ITS DERIVATIVES.
 # =============================================================================
 #
-#  SaveToAvi.py shows how to create an AVI video from a vector of
+#  image_reader_worker.py shows how to create an AVI video from a vector of
 #  images. It relies on information provided in the Enumeration, Acquisition,
 #  and NodeMapInfo examples.
 #
@@ -31,14 +31,13 @@ import time
 import datetime
 import matplotlib.pyplot as plt
 import utils
-import cv2
-import glob
-import os
+
+
 # this array of arrays is used to create a log of which frame was captured at the time of stimulus event
 # see NUM_IMAGES
 # each item is [timestamp, frame-number, stimulus-message ]
 image_array = [['timestamp', 'image no', 'stimulus']]
-global queue
+global queue_reader, queue_writer, writer_process
 global file_prefix, data_path
 
 
@@ -230,7 +229,7 @@ def print_device_info(nodemap):
 
 
 def acquire_images(cam, nodemap):
-    global queue
+    global queue_reader, queue_writer
     global file_prefix
     """
     This function acquires 30 images from a device, stores them in a list, and returns the list.
@@ -285,7 +284,9 @@ def acquire_images(cam, nodemap):
 
         # setting parameters to the JPEG coder
         op = PySpin.JPEGOption()
-        op.quality = 75
+        op.quality = 50
+
+        # todo Wait for signal to start recording
 
         # taking one image just to get the w/h
         image_result = cam.GetNextImage(1000)
@@ -301,11 +302,14 @@ def acquire_images(cam, nodemap):
                     #  Print image information; height and width recorded in pixels
                     # print('Grabbed Image %d, width = %d, height = %d' % (i, width, height))
                     # print(f"current time:-{datetime.datetime.now()}")
-                    if queue.qsize() > 0:
-                        msg = queue.get()
+                    if queue_reader.qsize() > 0:
+                        msg = queue_reader.get()
                         if msg == 'exit':
-                            print(f"message = {msg}")
                             utils.array_to_csv(f'{data_path}\\{file_prefix}_log.csv', image_array)
+                            queue_writer.put((-1, (width, height, file_prefix)))
+
+                            print(f"process camera_control_worker is done ")
+
                         else:
                             image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), i, msg])
 
@@ -327,7 +331,8 @@ def acquire_images(cam, nodemap):
 
                     #  Convert image to mono 8 and append to list
                     # images.append(image_result.Convert(PySpin.PixelFormat_Mono8, PySpin.HQ_LINEAR))
-                    image_result.Save(f"{data_path}\\img{i}.jpeg", op)
+                    queue_writer.put((i, image_result.GetNDArray()))
+                    # image_result.Save(f"{data_path}\\img{i}.jpeg", op)
                     image_result.Release()
                     i += 1
                     #  Retrieve next received image
@@ -337,8 +342,7 @@ def acquire_images(cam, nodemap):
                 result = False
 
         delta = time.time() - t1
-        print(f"{i} images taken in {delta} sec , frames per sec {i/delta}")
-        opencv_create_video(file_prefix, height, width)
+        print(f"{i} images taken in {delta} sec , frames per sec {i / delta}")
 
         # End acquisition
         cam.EndAcquisition()
@@ -350,23 +354,6 @@ def acquire_images(cam, nodemap):
     return result, images
 
 
-def opencv_create_video(file_prefix, height, width):
-    img_array = []
-    i = 0
-    frame_rate = 30
-    size = (width, height)
-    out = cv2.VideoWriter(f'{data_path}\\{file_prefix}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), frame_rate, (width, height))
-
-    print("create video in progress, will report every 1000 files")
-    for filename in glob.glob(f'{data_path}\\*.jpeg'):
-        img = cv2.imread(filename)
-        out.write(img)
-        os.remove(filename)
-        i = i + 1
-        if i % 1000 == 0:
-            print(f'{i} images processed')
-
-    out.release()
 
 
 def run_single_camera(cam):
@@ -470,13 +457,14 @@ def main():
     return result
 
 
-def camera_control_worker(queue_in, path_in, file_prefix_in):
-    global queue, file_prefix, data_path
+def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in):
+    global queue_reader, queue_writer, file_prefix, data_path, writer_process
     data_path = path_in
     file_prefix = file_prefix_in
     name = multiprocessing.current_process().name
     print(f"queue {name} running")
-    queue = queue_in
+    queue_reader = queue_reader_in
+    queue_writer = queue_writer_in
     main()
 
 

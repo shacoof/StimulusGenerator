@@ -3,6 +3,8 @@ import socket
 import time
 import logging
 import os
+import cv2
+import glob
 
 
 def loadCSV(csvFileName):
@@ -64,3 +66,20 @@ def create_directory(dir_name):
             return True
         else:
             return False
+
+def opencv_create_video(file_prefix, height, width, data_path):
+    i = 0
+    frame_rate = 30
+    out = cv2.VideoWriter(f'{data_path}\\{file_prefix}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), frame_rate,
+                          (width, height))
+
+    print("create video in progress")
+    for filename in glob.glob(f'{data_path}\\*.jpeg'):
+        img = cv2.imread(filename)
+        out.write(img)
+        # os.remove(filename)
+        i = i + 1
+        if i % 1000 == 0:
+            print(f'{i} images processed')
+
+    out.release()

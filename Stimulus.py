@@ -159,6 +159,7 @@ class Stimulus:
         if self.delaySoFar < self.delay:
             return
 
+        # this is currently not in use as we always have it disabled, this was replaced NIDAQ
         if self.app.f9CommunicationEnabled and not self.f9CommunicationSent:
             # logging.info("sending f9 communication")
             sendF9Marker()

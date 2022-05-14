@@ -1,2 +1,2 @@
 exitCriteria,startX,startY,endX,endY,repetitions,fastSpeed,slowSpeed,startShapeRadius,endShapeRadius,fastDuration,slowDuration,startMode,delay,duration,xType
-spacer,10,600,10,600,1,0,0,4,4,500,500,After,0,600000,degrees
+spacer,10,600,10,600,1,0,0,4,4,500,500,After,0,4000,degrees

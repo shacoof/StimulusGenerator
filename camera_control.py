@@ -1,4 +1,4 @@
-import multiprocessing
+"""import multiprocessing
 import time
 import datetime
 
@@ -16,4 +16,4 @@ def camera_control_worker(queue):
             if q == 'exit':
                 stay = False
 
-    print(name, 'Exiting')
+    print(name, 'Exiting')"""

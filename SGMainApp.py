@@ -14,16 +14,17 @@ import sys
 from StimuliGenerator import *
 import constants
 import multiprocessing
-import SaveToAvi
+import image_reader_worker
 import datetime
+import image_writer_worker
 
 
-#TODO automatically close/start new file after 30min
-#TODO Bug with O and P (exit and pause)
-#TODO save format MP4 , see save_list_to_avi
-#TODO allow re-run - new file prefix
-#TODO allow pause, run after pause is re-run
-#TODO lose focuse at the end of the run... maybe because of print ?
+# TODO automatically close/start new file after 30min
+# TODO Bug with O and P (exit and pause)
+# TODO save format MP4 , see save_list_to_avi
+# TODO allow re-run - new file prefix
+# TODO allow pause, run after pause is re-run
+# TODO lose focuse at the end of the run... maybe because of print ?
 
 class App:
     sg = ""
@@ -75,8 +76,10 @@ class App:
 
         self.positionDegreesToVSTable = []
         self.calcConvertPositionToPixelsTable()  # populate the above table
-        self.queue = None
+        self.queue_reader = None
+        self.queue_writer = None
         self.camera = None
+        self.writer_process = None
         if self.camera_control.lower() == "on":
             # get experiment prefix for file names etc.
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -89,10 +92,16 @@ class App:
                 self.data_path = f"{self.data_path}\\{file_prefix}"
 
             shutil.copyfile(constants.STIMULUS_CONFIG, f"{self.data_path}\\{constants.STIMULUS_CONFIG}")
-            self.queue = multiprocessing.Queue()  # communication queue to the worker
-            self.camera = multiprocessing.Process(name='camera_control_worker',       # Creation of the worker
-                                             target=SaveToAvi.camera_control_worker,
-                                             args=(self.queue, self.data_path, file_prefix))
+            self.queue_reader = multiprocessing.Queue()  # communication queue to the worker
+            self.queue_writer = multiprocessing.Queue()  # communication queue to the worker
+            self.camera = multiprocessing.Process(name='camera_control_worker',  # Creation of the worker
+                                                  target=SaveToAvi.camera_control_worker,
+                                                  args=(
+                                                      self.queue_reader, self.queue_writer, self.data_path,
+                                                      file_prefix))
+            self.writer_process = multiprocessing.Process(name='image_writer_worker',
+                                                          target=image_writer_worker.image_writer_worker,
+                                                          args=(self.queue_writer, self.data_path))
 
         screen.focus_force()
         if self.NiDaqPulseEnabled.lower() == "on":
@@ -162,7 +171,7 @@ class App:
         if self.output_device is not None:
             self.output_device.stop()
         if self.camera:
-            self.queue.put('exit')
+            self.queue_reader.put('exit')
             self.camera.join()
         sys.exit()
 
@@ -218,7 +227,7 @@ class App:
             if self.sg != "":
                 self.sg.terminate_run()
             if self.camera:
-                self.queue.put('exit')
+                self.queue_reader.put('exit')
                 print('EXIT SENT ')
                 self.camera.join()
                 self.camera = None  # this will all restart
@@ -227,7 +236,9 @@ class App:
             self.state = constants.RUN
             if self.camera:
                 self.camera.start()
-            self.sg = StimulusGenerator(self.canvas, self, self.output_device, self.queue)
+                self.writer_process.start()
+
+            self.sg = StimulusGenerator(self.canvas, self, self.output_device, self.queue_reader)
             self.runStimuli()
 
     def runStimuli(self):  # this is main loop of stimulus
@@ -239,11 +250,10 @@ class App:
             self.state = constants.PAUSE
             self.camera = None  # to allow re-run
         else:
-
+            """We will need that only if we want to split files as they get too big
             if time.time() - self.run_start_time > self.split_rate:
                 self.run_start_time = time.time()
-                print(f"we need to split")
-
+                print(f"we need to split")"""
             self.canvas.after(constants.SLEEP_TIME, self.runStimuli)
 
     def calcGeometry(self, screen_width, screen_height):
@@ -409,7 +419,6 @@ class App:
 
 
 if __name__ == '__main__':
-
     logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
     root = Tk()
     app = App(root)
