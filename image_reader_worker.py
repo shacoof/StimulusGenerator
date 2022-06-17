@@ -293,21 +293,21 @@ def acquire_images(cam, nodemap):
                 if image_result.IsIncomplete():
                     print('Image incomplete with image status %d...' % image_result.GetImageStatus())
                 else:
-
                     if queue_reader.qsize() > 0:
                         msg = queue_reader.get()
                         if msg == 'exit':
                             utils.array_to_csv(f'{data_path}\\{file_prefix}_log.csv', image_array)
-                            # one for each writer, we have 2, the third is for main to use to create the move
+                            # one for each writer, we have 2, the third is for main to use to create the movie
+                            # the tupple (w,h,file_prefix) is used by the main
+                            # See SGMainApp in section  "if self.sg.run_stimuli() == constants.DONE"
                             queue_writer.put((-1, (width, height, file_prefix)))
                             queue_writer.put((-1, (width, height, file_prefix)))
                             queue_writer.put((-1, (width, height, file_prefix)))
-
                             print(f"process camera_control_worker is done ")
-
                         else:
                             image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), i, msg])
 
+                    # note that I already acquire the image, so even if exit sent I still have 1 image in the buffer
                     queue_writer.put((i, image_result.GetNDArray()))
                     image_result.Release()
                     i += 1

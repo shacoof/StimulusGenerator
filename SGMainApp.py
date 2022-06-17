@@ -33,6 +33,7 @@ class App:
 
     def __init__(self, screen):
         # these 3 are for ni-daq output (port & line it's connected to, device is initialized later)
+        self.screen = screen
         self.state = None
         self.port = 1
         self.line = 7
@@ -85,32 +86,11 @@ class App:
         self.camera = None
         self.writer_process1 = None
         self.writer_process2 = None
+
+        screen.geometry("+800+800")
+
         if self.camera_control.lower() == "on":
-            # get experiment prefix for file names etc.
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            fish_name = input(f"Enter fish name: ")
-            file_prefix = f"{timestamp}_{fish_name}"
-            self.data_path = f"{self.data_path}\\{file_prefix}"
-            while fish_name == '' or not utils.create_directory(f"{self.data_path}"):
-                fish_name = input(f"Fish name must be unique and not empty: ")
-                file_prefix = f"{timestamp}_{fish_name}"
-                self.data_path = f"{self.data_path}\\{file_prefix}"
-
-            shutil.copyfile(constants.STIMULUS_CONFIG, f"{self.data_path}\\{constants.STIMULUS_CONFIG}")
-            self.queue_reader = multiprocessing.Queue()  # communication queue to the worker
-            self.queue_writer = multiprocessing.Queue()  # communication queue to the worker
-            self.camera = multiprocessing.Process(name='camera_control_worker',  # Creation of the worker
-                                                  target=image_reader_worker.camera_control_worker,
-                                                  args=(
-                                                      self.queue_reader, self.queue_writer, self.data_path,
-                                                      file_prefix))
-            self.writer_process1 = multiprocessing.Process(name='image_writer_worker1',
-                                                           target=image_writer_worker.image_writer_worker,
-                                                           args=(self.queue_writer, self.data_path, self.image_file_type))
-
-            self.writer_process2 = multiprocessing.Process(name='image_writer_worker2',
-                                                           target=image_writer_worker.image_writer_worker,
-                                                           args=(self.queue_writer, self.data_path, self.image_file_type))
+            self.setup_camera()
 
         screen.focus_force()
         if self.NiDaqPulseEnabled.lower() == "on":
@@ -161,6 +141,36 @@ class App:
         screen.bind('?', self.printHelp)
         self.printHelp("")
 
+    """
+    setup the camera, this requires
+        getting the fish name 
+        creating the workers and the queues 
+    """
+    def setup_camera(self):
+        # get experiment prefix for file names etc.
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        fish_name = input(f"Enter fish name: ")
+        file_prefix = f"{timestamp}_{fish_name}"
+        self.data_path = f"{self.data_path}\\{file_prefix}"
+        while fish_name == '' or not utils.create_directory(f"{self.data_path}"):
+            fish_name = input(f"Fish name must be unique and not empty: ")
+            file_prefix = f"{timestamp}_{fish_name}"
+            self.data_path = f"{self.data_path}\\{file_prefix}"
+        shutil.copyfile(constants.STIMULUS_CONFIG, f"{self.data_path}\\{constants.STIMULUS_CONFIG}")
+        self.queue_reader = multiprocessing.Queue()  # communication queue to the worker
+        self.queue_writer = multiprocessing.Queue()  # communication queue to the worker
+        self.camera = multiprocessing.Process(name='camera_control_worker',  # Creation of the worker
+                                              target=image_reader_worker.camera_control_worker,
+                                              args=(
+                                                  self.queue_reader, self.queue_writer, self.data_path,
+                                                  file_prefix))
+        self.writer_process1 = multiprocessing.Process(name='image_writer_worker1',
+                                                       target=image_writer_worker.image_writer_worker,
+                                                       args=(self.queue_writer, self.data_path, self.image_file_type))
+        self.writer_process2 = multiprocessing.Process(name='image_writer_worker2',
+                                                       target=image_writer_worker.image_writer_worker,
+                                                       args=(self.queue_writer, self.data_path, self.image_file_type))
+
     def updateConfig(self, event):
         """
         Update config file with current VS settings
@@ -189,7 +199,7 @@ class App:
         if self.writer_process2:
             self.writer_process2.join()
             self.writer_process2.terminate()
-
+        self.screen.destroy()
         sys.exit()
 
     def printHelp(self, event):
@@ -271,8 +281,6 @@ class App:
                 self.writer_process1.join()
                 self.writer_process2.join()
                 self.camera = None  # to allow re-run
-
-                # todo we are not waiting for the writer to complete, e.g. we need to do join
                 # if we got here than all other processes are done (due to join) and we have a message waiting for us
                 i, image_result = self.queue_writer.get()
                 width = image_result[0]
