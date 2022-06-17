@@ -17,14 +17,16 @@ import multiprocessing
 import image_reader_worker
 import datetime
 import image_writer_worker
+from utils import opencv_create_video
 
 
-# TODO automatically close/start new file after 30min
 # TODO Bug with O and P (exit and pause)
 # TODO save format MP4 , see save_list_to_avi
 # TODO allow re-run - new file prefix
 # TODO allow pause, run after pause is re-run
 # TODO lose focuse at the end of the run... maybe because of print ?
+
+
 
 class App:
     sg = ""
@@ -68,6 +70,8 @@ class App:
         self.projectorOnMonitor = self.getAppConfig("projectorOnMonitor")
         self.camera_control = self.getAppConfig("cameraControl", "str")
         self.data_path = self.getAppConfig("data_path", "str")
+        self.image_file_type = self.getAppConfig("image_file_type","str")
+
         self.split_rate = self.getAppConfig("split_rate")
         self.run_start_time = None
 
@@ -79,7 +83,8 @@ class App:
         self.queue_reader = None
         self.queue_writer = None
         self.camera = None
-        self.writer_process = None
+        self.writer_process1 = None
+        self.writer_process2 = None
         if self.camera_control.lower() == "on":
             # get experiment prefix for file names etc.
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -95,13 +100,17 @@ class App:
             self.queue_reader = multiprocessing.Queue()  # communication queue to the worker
             self.queue_writer = multiprocessing.Queue()  # communication queue to the worker
             self.camera = multiprocessing.Process(name='camera_control_worker',  # Creation of the worker
-                                                  target=SaveToAvi.camera_control_worker,
+                                                  target=image_reader_worker.camera_control_worker,
                                                   args=(
                                                       self.queue_reader, self.queue_writer, self.data_path,
                                                       file_prefix))
-            self.writer_process = multiprocessing.Process(name='image_writer_worker',
-                                                          target=image_writer_worker.image_writer_worker,
-                                                          args=(self.queue_writer, self.data_path))
+            self.writer_process1 = multiprocessing.Process(name='image_writer_worker1',
+                                                           target=image_writer_worker.image_writer_worker,
+                                                           args=(self.queue_writer, self.data_path, self.image_file_type))
+
+            self.writer_process2 = multiprocessing.Process(name='image_writer_worker2',
+                                                           target=image_writer_worker.image_writer_worker,
+                                                           args=(self.queue_writer, self.data_path, self.image_file_type))
 
         screen.focus_force()
         if self.NiDaqPulseEnabled.lower() == "on":
@@ -173,6 +182,14 @@ class App:
         if self.camera:
             self.queue_reader.put('exit')
             self.camera.join()
+            self.camera.terminate()
+        if self.writer_process1:
+            self.writer_process1.join()
+            self.writer_process1.terminate()
+        if self.writer_process2:
+            self.writer_process2.join()
+            self.writer_process2.terminate()
+
         sys.exit()
 
     def printHelp(self, event):
@@ -230,13 +247,14 @@ class App:
                 self.queue_reader.put('exit')
                 print('EXIT SENT ')
                 self.camera.join()
-                self.camera = None  # this will all restart
+                self.camera = None  # this will allow restart
         elif event.keysym == constants.RUN:
             self.run_start_time = time.time()
             self.state = constants.RUN
             if self.camera:
                 self.camera.start()
-                self.writer_process.start()
+                self.writer_process1.start()
+                self.writer_process2.start()
 
             self.sg = StimulusGenerator(self.canvas, self, self.output_device, self.queue_reader)
             self.runStimuli()
@@ -248,7 +266,19 @@ class App:
             logging.info("All stimuli were executed ! ")
             self.setDebugText("Done")
             self.state = constants.PAUSE
-            self.camera = None  # to allow re-run
+
+            if self.camera:
+                self.writer_process1.join()
+                self.writer_process2.join()
+                self.camera = None  # to allow re-run
+
+                # todo we are not waiting for the writer to complete, e.g. we need to do join
+                # if we got here than all other processes are done (due to join) and we have a message waiting for us
+                i, image_result = self.queue_writer.get()
+                width = image_result[0]
+                height = image_result[1]
+                file_prefix = image_result[2]
+                opencv_create_video(file_prefix, height, width, self.data_path, self.image_file_type)
         else:
             """We will need that only if we want to split files as they get too big
             if time.time() - self.run_start_time > self.split_rate:

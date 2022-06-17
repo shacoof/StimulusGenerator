@@ -29,7 +29,6 @@ import sys
 import multiprocessing
 import time
 import datetime
-import matplotlib.pyplot as plt
 import utils
 
 
@@ -273,14 +272,9 @@ def acquire_images(cam, nodemap):
         # Retrieve, convert, and save images
         images = list()
 
-        # Figure(1) is default so you can omit this line. Figure(0) will create a new window every time program hits this line
-        fig = plt.figure(1)
-
-        # Close the GUI when close event happens
-        fig.canvas.mpl_connect('close_event', handle_close)
         i = 0
         msg = 'stay'
-        print(f"Taking images, will report every 100 images")
+        print(f"Taking images...")
 
         # setting parameters to the JPEG coder
         op = PySpin.JPEGOption()
@@ -299,13 +293,14 @@ def acquire_images(cam, nodemap):
                 if image_result.IsIncomplete():
                     print('Image incomplete with image status %d...' % image_result.GetImageStatus())
                 else:
-                    #  Print image information; height and width recorded in pixels
-                    # print('Grabbed Image %d, width = %d, height = %d' % (i, width, height))
-                    # print(f"current time:-{datetime.datetime.now()}")
+
                     if queue_reader.qsize() > 0:
                         msg = queue_reader.get()
                         if msg == 'exit':
                             utils.array_to_csv(f'{data_path}\\{file_prefix}_log.csv', image_array)
+                            # one for each writer, we have 2, the third is for main to use to create the move
+                            queue_writer.put((-1, (width, height, file_prefix)))
+                            queue_writer.put((-1, (width, height, file_prefix)))
                             queue_writer.put((-1, (width, height, file_prefix)))
 
                             print(f"process camera_control_worker is done ")
@@ -313,26 +308,7 @@ def acquire_images(cam, nodemap):
                         else:
                             image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), i, msg])
 
-                    # Getting the image data as a numpy array
-                    # image_data = image_result.GetNDArray()
-                    # out.write(image_data)
-                    # the below responsible for the live video
-                    """if (i % 10 == 0):
-                        # Draws an image on the current figure
-                        plt.imshow(image_data, cmap='gray')
-                        plt.axis('off')
-
-                        # Interval in plt.pause(interval) determines how fast the images are displayed in a GUI
-                        # Interval is in seconds.
-                        plt.pause(0.001)
-
-                        # Clear current reference of a figure. This will improve display speed significantly
-                        plt.clf()"""
-
-                    #  Convert image to mono 8 and append to list
-                    # images.append(image_result.Convert(PySpin.PixelFormat_Mono8, PySpin.HQ_LINEAR))
                     queue_writer.put((i, image_result.GetNDArray()))
-                    # image_result.Save(f"{data_path}\\img{i}.jpeg", op)
                     image_result.Release()
                     i += 1
                     #  Retrieve next received image
@@ -343,7 +319,6 @@ def acquire_images(cam, nodemap):
 
         delta = time.time() - t1
         print(f"{i} images taken in {delta} sec , frames per sec {i / delta}")
-
         # End acquisition
         cam.EndAcquisition()
 
@@ -352,8 +327,6 @@ def acquire_images(cam, nodemap):
         result = False
 
     return result, images
-
-
 
 
 def run_single_camera(cam):
@@ -437,10 +410,7 @@ def main():
 
     # Run example on each camera
     for i, cam in enumerate(cam_list):
-        print('Running example for camera %d...' % i)
-
         result &= run_single_camera(cam)
-        print('Camera %d example complete... \n' % i)
 
     # Release reference to camera
     # NOTE: Unlike the C++ examples, we cannot rely on pointer objects being automatically
@@ -466,6 +436,7 @@ def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix
     queue_reader = queue_reader_in
     queue_writer = queue_writer_in
     main()
+    return
 
 
 if __name__ == '__main__':

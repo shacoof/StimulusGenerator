@@ -34,6 +34,7 @@ projectorOnMonitor = 0|1|2 the number of the monitor that is the projector, e.g.
 cameraControl = ON|OFF. if ON then camera is activated and capturing video 
 data_path = location where the files will be saved use double \\ for directory path, e.g. C:\\Data
 split_files = in seconds, controls splitting files frequency to avoid program crash 
+image_file_type = can be PNG, JPEG or any other file type supported by CV2
 
 stimulusConfig.csv
 The coordinates of the virtual screen are between 0-999. top left corenr is (0,0)
