@@ -37,7 +37,7 @@ import utils
 # each item is [timestamp, frame-number, stimulus-message ]
 image_array = [['timestamp', 'image no', 'stimulus']]
 global queue_reader, queue_writer, writer_process
-global file_prefix, data_path
+global file_prefix, data_path, output_device_camera_frame_coutner
 
 
 class AviType:
@@ -311,6 +311,12 @@ def acquire_images(cam, nodemap):
                     queue_writer.put((i, image_result.GetNDArray()))
                     image_result.Release()
                     i += 1
+
+                    # TODO (LILACH) here send TTL based on i value
+                    # if (i % 100 == 166) and (output_device_camera_frame_coutner is not None):
+                    #    output_device_camera_frame_coutner.give_pulse()
+
+
                     #  Retrieve next received image
                     image_result = cam.GetNextImage(1000)
             except PySpin.SpinnakerException as ex:
@@ -427,8 +433,9 @@ def main():
     return result
 
 
-def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in):
-    global queue_reader, queue_writer, file_prefix, data_path, writer_process
+def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in, output_device_camera_frame_coutner_in):
+    global queue_reader, queue_writer, file_prefix, data_path, writer_process, output_device_camera_frame_coutner
+    output_device_camera_frame_coutner = output_device_camera_frame_coutner_in
     data_path = path_in
     file_prefix = file_prefix_in
     name = multiprocessing.current_process().name

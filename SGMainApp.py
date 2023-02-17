@@ -38,6 +38,7 @@ class App:
         self.port = 1
         self.line = 7
         self.output_device = None
+        self.output_device_camera_frame_coutner = None
         self.debug = False
         self.controlMode = "l"  # l = location, s = size
         # user by the x (cross) button to show virtual screen cross
@@ -99,12 +100,15 @@ class App:
             try:
                 task = NiDaqPulse(device_name="Dev2/port{0}/line{1}".format(self.port, self.line))
                 self.output_device = task
+                # TODO (LILACH) create new second output device, change port / line
+                # self.output_device_camera_frame_coutner = NiDaqPulse(device_name="Dev2/port{0}/line{1}".format(self.port, self.line))
             except nidaqmx.DaqError as e:
                 print(e)
                 if task:
                     task.stop()
         else:
             self.output_device = None
+            self.output_device_camera_frame_coutner = None
 
         if self.f9CommunicationEnabled.lower() == "on":
             self.f9CommunicationEnabled = False
@@ -163,7 +167,7 @@ class App:
                                               target=image_reader_worker.camera_control_worker,
                                               args=(
                                                   self.queue_reader, self.queue_writer, self.data_path,
-                                                  file_prefix))
+                                                  file_prefix, self.output_device_camera_frame_coutner))
         self.writer_process1 = multiprocessing.Process(name='image_writer_worker1',
                                                        target=image_writer_worker.image_writer_worker,
                                                        args=(self.queue_writer, self.data_path, self.image_file_type))
@@ -189,6 +193,8 @@ class App:
         logging.info("Bye bye !")
         if self.output_device is not None:
             self.output_device.stop()
+        if self.output_device_camera_frame_coutner is not None:
+            self.output_device_camera_frame_coutner.stop()
         if self.camera:
             self.queue_reader.put('exit')
             self.camera.join()
