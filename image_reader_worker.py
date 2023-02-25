@@ -30,14 +30,14 @@ import multiprocessing
 import time
 import datetime
 import utils
-
+from NiDaqPulse import NiDaqPulse
 
 # this array of arrays is used to create a log of which frame was captured at the time of stimulus event
 # see NUM_IMAGES
 # each item is [timestamp, frame-number, stimulus-message ]
 image_array = [['timestamp', 'image no', 'stimulus']]
 global queue_reader, queue_writer, writer_process
-global file_prefix, data_path, output_device_camera_frame_coutner
+global file_prefix, data_path, camera_output_device
 
 
 class AviType:
@@ -274,7 +274,7 @@ def acquire_images(cam, nodemap):
 
         i = 0
         msg = 'stay'
-        print(f"Taking images...")
+        print(f"******* Taking images...")
 
         # setting parameters to the JPEG coder
         op = PySpin.JPEGOption()
@@ -296,7 +296,6 @@ def acquire_images(cam, nodemap):
                     if queue_reader.qsize() > 0:
                         msg = queue_reader.get()
                         if msg == 'exit':
-                            utils.array_to_csv(f'{data_path}\\{file_prefix}_log.csv', image_array)
                             # one for each writer, we have 2, the third is for main to use to create the movie
                             # the tupple (w,h,file_prefix) is used by the main
                             # See SGMainApp in section  "if self.sg.run_stimuli() == constants.DONE"
@@ -313,8 +312,9 @@ def acquire_images(cam, nodemap):
                     i += 1
 
                     # TODO (LILACH) here send TTL based on i value
-                    # if (i % 100 == 166) and (output_device_camera_frame_coutner is not None):
-                    #    output_device_camera_frame_coutner.give_pulse()
+                    if (i % 166 == 0) and (camera_output_device is not None):
+                       camera_output_device.give_pulse()
+                       print(f"****** Give pulse frame number = {i}")
 
 
                     #  Retrieve next received image
@@ -324,7 +324,10 @@ def acquire_images(cam, nodemap):
                 result = False
 
         delta = time.time() - t1
-        print(f"{i} images taken in {delta} sec , frames per sec {i / delta}")
+        msg = f"{i} images taken in {delta} sec , frames per sec {i / delta}"
+        print(msg)
+        image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), 0, msg])
+        utils.array_to_csv(f'{data_path}\\{file_prefix}_log.csv', image_array)
         # End acquisition
         cam.EndAcquisition()
 
@@ -433,16 +436,18 @@ def main():
     return result
 
 
-def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in, output_device_camera_frame_coutner_in):
-    global queue_reader, queue_writer, file_prefix, data_path, writer_process, output_device_camera_frame_coutner
-    output_device_camera_frame_coutner = output_device_camera_frame_coutner_in
+def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in):
+    global queue_reader, queue_writer, file_prefix, data_path, writer_process, camera_output_device
+    camera_output_device = NiDaqPulse(device_name=f"Dev2/port1/line6")
     data_path = path_in
     file_prefix = file_prefix_in
     name = multiprocessing.current_process().name
-    print(f"queue {name} running")
+    print(f"******** queue {name} running, camera output device = {camera_output_device}")
     queue_reader = queue_reader_in
     queue_writer = queue_writer_in
     main()
+    if camera_output_device is not None:
+        camera_output_device.stop()
     return
 
 

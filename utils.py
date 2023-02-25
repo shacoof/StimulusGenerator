@@ -75,11 +75,11 @@ def opencv_create_video(file_prefix, height, width, data_path, image_file_type):
                           (width, height))
 
     print("create video in progress")
+    font = cv2.FONT_HERSHEY_SIMPLEX
     for filename in glob.glob(f'{data_path}\\*.{image_file_type}'):
         print(filename)
         img = cv2.imread(filename)
         text = f'frame={i}'
-        font = cv2.FONT_HERSHEY_SIMPLEX
         cv2.putText(img, text, (1, 50), font, 2, (255, 255, 0), 2)
         out.write(img)
         # os.remove(filename)
@@ -89,6 +89,5 @@ def opencv_create_video(file_prefix, height, width, data_path, image_file_type):
 
     out.release()
     print("video is completed")
-
 
 

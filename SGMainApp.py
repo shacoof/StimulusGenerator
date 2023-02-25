@@ -20,12 +20,10 @@ import image_writer_worker
 from utils import opencv_create_video
 
 
-# TODO Bug with O and P (exit and pause)
-# TODO save format MP4 , see save_list_to_avi
+# TODO save all config files in separate directory and allow to use specific config file by it's name (select screen) - no need to edit them
 # TODO allow re-run - new file prefix
 # TODO allow pause, run after pause is re-run
 # TODO lose focuse at the end of the run... maybe because of print ?
-
 
 
 class App:
@@ -36,9 +34,9 @@ class App:
         self.screen = screen
         self.state = None
         self.port = 1
-        self.line = 7
-        self.output_device = None
-        self.output_device_camera_frame_coutner = None
+        self.stimulus_line = 7
+        self.camera_line = 6
+        self.stimulus_output_device = None
         self.debug = False
         self.controlMode = "l"  # l = location, s = size
         # user by the x (cross) button to show virtual screen cross
@@ -72,7 +70,7 @@ class App:
         self.projectorOnMonitor = self.getAppConfig("projectorOnMonitor")
         self.camera_control = self.getAppConfig("cameraControl", "str")
         self.data_path = self.getAppConfig("data_path", "str")
-        self.image_file_type = self.getAppConfig("image_file_type","str")
+        self.image_file_type = self.getAppConfig("image_file_type", "str")
 
         self.split_rate = self.getAppConfig("split_rate")
         self.run_start_time = None
@@ -87,28 +85,28 @@ class App:
         self.camera = None
         self.writer_process1 = None
         self.writer_process2 = None
+        self.file_prefix = None
 
         screen.geometry("+800+800")
-
-        if self.camera_control.lower() == "on":
-            self.setup_camera()
 
         screen.focus_force()
         if self.NiDaqPulseEnabled.lower() == "on":
             # try to add channel
             task = None
+            task2 = None
             try:
-                task = NiDaqPulse(device_name="Dev2/port{0}/line{1}".format(self.port, self.line))
-                self.output_device = task
-                # TODO (LILACH) create new second output device, change port / line
-                # self.output_device_camera_frame_coutner = NiDaqPulse(device_name="Dev2/port{0}/line{1}".format(self.port, self.line))
+                task = NiDaqPulse(device_name="Dev2/port{0}/line{1}".format(self.port, self.stimulus_line))
+                self.stimulus_output_device = task
+
             except nidaqmx.DaqError as e:
                 print(e)
                 if task:
                     task.stop()
         else:
-            self.output_device = None
-            self.output_device_camera_frame_coutner = None
+            self.stimulus_output_device = None
+
+        if self.camera_control.lower() == "on":
+            self.setup_camera()
 
         if self.f9CommunicationEnabled.lower() == "on":
             self.f9CommunicationEnabled = False
@@ -150,16 +148,17 @@ class App:
         getting the fish name 
         creating the workers and the queues 
     """
+
     def setup_camera(self):
         # get experiment prefix for file names etc.
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         fish_name = input(f"Enter fish name: ")
-        file_prefix = f"{timestamp}_{fish_name}"
-        self.data_path = f"{self.data_path}\\{file_prefix}"
+        self.file_prefix = f"{timestamp}_{fish_name}"
+        self.data_path = f"{self.data_path}\\{self.file_prefix}"
         while fish_name == '' or not utils.create_directory(f"{self.data_path}"):
             fish_name = input(f"Fish name must be unique and not empty: ")
-            file_prefix = f"{timestamp}_{fish_name}"
-            self.data_path = f"{self.data_path}\\{file_prefix}"
+            self.file_prefix = f"{timestamp}_{fish_name}"
+            self.data_path = f"{self.data_path}\\{self.file_prefix}"
         shutil.copyfile(constants.STIMULUS_CONFIG, f"{self.data_path}\\{constants.STIMULUS_CONFIG}")
         self.queue_reader = multiprocessing.Queue()  # communication queue to the worker
         self.queue_writer = multiprocessing.Queue()  # communication queue to the worker
@@ -167,7 +166,7 @@ class App:
                                               target=image_reader_worker.camera_control_worker,
                                               args=(
                                                   self.queue_reader, self.queue_writer, self.data_path,
-                                                  file_prefix, self.output_device_camera_frame_coutner))
+                                                  self.file_prefix))
         self.writer_process1 = multiprocessing.Process(name='image_writer_worker1',
                                                        target=image_writer_worker.image_writer_worker,
                                                        args=(self.queue_writer, self.data_path, self.image_file_type))
@@ -191,10 +190,8 @@ class App:
     def leaveProg(self, event):
         logging.debug(event)
         logging.info("Bye bye !")
-        if self.output_device is not None:
-            self.output_device.stop()
-        if self.output_device_camera_frame_coutner is not None:
-            self.output_device_camera_frame_coutner.stop()
+        if self.stimulus_output_device is not None:
+            self.stimulus_output_device.stop()
         if self.camera:
             self.queue_reader.put('exit')
             self.camera.join()
@@ -272,7 +269,7 @@ class App:
                 self.writer_process1.start()
                 self.writer_process2.start()
 
-            self.sg = StimulusGenerator(self.canvas, self, self.output_device, self.queue_reader)
+            self.sg = StimulusGenerator(self.canvas, self, self.stimulus_output_device, self.queue_reader)
             self.runStimuli()
 
     def runStimuli(self):  # this is main loop of stimulus
@@ -292,7 +289,26 @@ class App:
                 width = image_result[0]
                 height = image_result[1]
                 file_prefix = image_result[2]
-                opencv_create_video(file_prefix, height, width, self.data_path, self.image_file_type)
+
+                f = open(f'{self.data_path}\\create_video.bat', "a")
+                f.write(
+                    f"C:\\Users\\owner\\Documents\\Code\\StimulusGenerator\\venv\\Scripts\\python .\\create_video.py \n")
+                f.write("pause\nexit\n")
+                f.close()
+
+                self.data_path = self.getAppConfig("data_path", "str")
+                self.data_path = f"{self.data_path}\\\\{self.file_prefix}"
+
+
+                f = open(f'{self.data_path}\\create_video.py', "a")
+                f.write("import sys\n")
+                f.write(f"sys.path.append('C:\\\\Users\\\\owner\\\\Documents\\\\Code\\\\StimulusGenerator')\n")
+                f.write(f"from utils import opencv_create_video\n")
+                f.write(
+                    f"opencv_create_video('{file_prefix}', {height}, {width}, '{self.data_path}', '{self.image_file_type}')\n")
+                f.close()
+
+                # opencv_create_video(file_prefix, height, width, self.data_path, self.image_file_type)
         else:
             """We will need that only if we want to split files as they get too big
             if time.time() - self.run_start_time > self.split_rate:
