@@ -477,9 +477,10 @@ class App:
                 v = 500 + 500 * sin(radians(d)) * cos(radians(d / 2)) / sin(radians(90 - d / 2))
             self.positionDegreesToVSTable.append(v)
 
-
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
     root = Tk()
+    root.title("Shacoof fish Stimuli Generator ")
+    utils.dark_title_bar(root)
     app = App(root)
     root.mainloop()

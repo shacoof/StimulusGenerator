@@ -5,6 +5,7 @@ import logging
 import os
 import cv2
 import glob
+import ctypes as ct
 
 
 def loadCSV(csvFileName):
@@ -91,3 +92,22 @@ def opencv_create_video(file_prefix, height, width, data_path, image_file_type):
     print("video is completed")
 
 
+def dark_title_bar(window):
+    """
+    Added by sharon in order to change the title bar to black
+    see youtube https://www.youtube.com/watch?v=4Gi1sKKn_Ts
+    last two lines were added as the above code
+    MORE INFO:
+    https://docs.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
+    """
+    window.update()
+    DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+    set_window_attribute = ct.windll.dwmapi.DwmSetWindowAttribute
+    get_parent = ct.windll.user32.GetParent
+    hwnd = get_parent(window.winfo_id())
+    rendering_policy = DWMWA_USE_IMMERSIVE_DARK_MODE
+    value = 2
+    value = ct.c_int(value)
+    set_window_attribute(hwnd, rendering_policy, ct.byref(value), ct.sizeof(value))
+    window.withdraw()  # added due to win10 adjustment, see comment inthe above youtueb
+    window.deiconify()  # same as above
