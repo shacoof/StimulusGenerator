@@ -98,7 +98,7 @@ class PCA:
         angle = reshaped_angle @ self.prediction_matrix_angle
         reshaped_distance = reduced_dim[9:35].T.reshape(1, 78)
         distance = np.square(reshaped_distance) @ self.prediction_matrix_distance
-        return angle, distance
+        return round(angle[0][0], 2), round(distance[0][0], 2)
 
     @staticmethod
     def clean_nan_from_data(data, remove_nan=False):

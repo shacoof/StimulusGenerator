@@ -1,2 +1,2 @@
-fishScreenStartX,fishScreenStartY,fishScreenWidth,fishScreenHeight,f9CommunicationEnabled,backgroundColor,virtualScreenColor,stimulusColor,DishRadiusSize,VirtualScreenDegrees,VirtualScreenWidthActualSize,VirtualScreenHeightActualSize,NiDaqPulseEnabled,projectorOnMonitor,cameraControl,data_path,split_rate,image_file_type
-489,736,207,41,ON,black,white,white,17,170,50,10,ON,0,on,C:\\Data,600,jpg
+fishScreenStartX,fishScreenStartY,fishScreenWidth,fishScreenHeight,f9CommunicationEnabled,backgroundColor,virtualScreenColor,stimulusColor,DishRadiusSize,VirtualScreenDegrees,VirtualScreenWidthActualSize,VirtualScreenHeightActualSize,NiDaqPulseEnabled,projectorOnMonitor,cameraControl,data_path,split_rate,image_file_type,use_closed_loop
+489,736,207,41,OFF,black,white,black,17,170,50,10,OFF,0,ON,C:\\Data,600,jpg,OFF

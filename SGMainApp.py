@@ -4,8 +4,18 @@ from tkinter import ttk
 from tkinter.ttk import tkinter
 from screeninfo import get_monitors
 import nidaqmx
+import time
+import sys
 import shutil
-
+import datetime
+import logging
+import multiprocessing
+from math import pi, cos
+from tkinter import Canvas, Tk, BOTH
+from tkinter import ttk
+from tkinter.ttk import tkinter
+import nidaqmx
+from screeninfo import get_monitors
 import utils
 from NiDaqPulse import NiDaqPulse
 from utils import writeCSV
@@ -14,45 +24,136 @@ import sys
 from StimuliGenerator import *
 import constants
 import multiprocessing
+from utils import writeCSV, opencv_create_video
+from StimuliGenerator import StimulusGenerator
+from main_closed_loop import ClosedLoop
+from closed_loop_config import *
+from calibration.calibrate import Calibrator
 import image_reader_worker
-import datetime
 import image_writer_worker
-from utils import opencv_create_video
+import constants
 
-
-# TODO save all config files in separate directory and allow to use specific config file by it's name (select screen) - no need to edit them
-# TODO allow re-run - new file prefix
-# TODO allow pause, run after pause is re-run
-# TODO lose focuse at the end of the run... maybe because of print ?
+# TODO save all config files in a separate directory and allow using a specific config file by name (select screen)
+# TODO allow re-run with a new file prefix
+# TODO allow pause, run after pause
+# TODO lose focus at the end of the run... maybe due to print?
 
 
 class App:
     sg = ""
 
-    def __init__(self, screen):
-        # these 3 are for ni-daq output (port & line it's connected to, device is initialized later)
+    def __init__(self, screen,pca_and_predict, image_processor, tail_tracker, bout_recognizer):
+        # Init vars
+        self.pca_and_predict = pca_and_predict
+        self.image_processor = image_processor
+        self.tail_tracker = tail_tracker
+        self.bout_recognizer = bout_recognizer
         self.screen = screen
         self.state = None
+        self.stimulus_output_device = None
         self.port = 1
         self.stimulus_line = 7
         self.camera_line = 6
-        self.stimulus_output_device = None
         self.debug = False
         self.controlMode = "l"  # l = location, s = size
-        # user by the x (cross) button to show virtual screen cross
         self.xMode = False  # false - no x is displayed in the middle of the screen
         self.xVertical = 0
         self.xHorizental = 0
         self.xBoundry = 0
-
-        # used by the y (mid button)  button to show mid screen marker
         self.yMode = False  # False - no midScreen marker is displayed
         self.yVertical = 0
         self.yHorizental = 0
-        #####
         self.bgColor = 0
         self.vsColor = 0
         self.stimulusColor = 0
+        self.run_start_time = None
+        self.deltaX = 0
+        self.deltaY = 0
+        self.positionDegreesToVSTable = []
+        self.calcConvertPositionToPixelsTable()  # populate the above table
+        self.queue_reader = None
+        self.queue_writer = None
+        self.camera = None
+        self.writer_process1 = None
+        self.writer_process2 = None
+        self.file_prefix = None
+
+        # Load App Config
+        self.load_app_config()
+
+        # Init screen
+        self.screen.geometry("+800+800")
+        self.screen.focus_force()
+        monitor = self.get_monitors_dimensions(self.projectorOnMonitor)
+        self.screen.geometry(f"{monitor['width']}x{monitor['height']}+{screen.winfo_screenwidth()}+0")
+        self.canvas = Canvas(screen, background="black")
+        self.textVar = tkinter.StringVar()
+        self.label = ttk.Label(self.canvas, textvariable=self.textVar)
+        self.label.config(font=("Courier", 20))
+        self.label.grid(column=0, row=0)
+        self.canvas.pack(fill=BOTH, expand=1)
+        self.vs = self.canvas.create_rectangle(self.vsX, self.vsY, self.vsX + self.vsWidth, self.vsY + self.vsHeight,
+                                               fill=self.vsColor)
+
+        # Init closed loop
+        if self.closed_loop.lower() == "on":
+            self.closed_loop_class = ClosedLoop(self.pca_and_predict, self.image_processor, self.tail_tracker
+                                                , self.bout_recognizer)
+
+        # Init NiDaq
+        if self.NiDaqPulseEnabled.lower() == "on":
+            self.init_NiDaq()
+
+        # Init camera
+        if self.camera_control.lower() == "on":
+            self.setup_camera()
+
+        # Init f9communication
+        self.init_f9_communication()
+
+        # Bind buttons
+        self.bind_buttons()
+
+    def bind_buttons(self):
+        self.screen.bind('<Up>', self.processEvent)
+        self.screen.bind('<Down>', self.processEvent)
+        self.screen.bind('<Left>', self.processEvent)
+        self.screen.bind('<Right>', self.processEvent)
+        self.screen.bind(constants.DEBUG, self.turnDebug)
+        self.screen.bind(constants.LOCATION, self.changeControlMode)
+        self.screen.bind(constants.SIZE, self.changeControlMode)
+        self.screen.bind(constants.UPDATE, self.updateConfig)
+        self.screen.bind(constants.EXIT, self.leaveProg)
+        self.screen.bind(constants.RUN, self.manageStimulus)
+        self.screen.bind(constants.PAUSE, self.manageStimulus)
+        self.screen.bind(constants.CROSS, self.showCrossAndBoundries)
+        self.screen.bind(constants.MID_SCREEN, self.showMidScreen)
+        self.screen.bind('?', self.printHelp)
+        self.printHelp("")
+
+    def init_f9_communication(self):
+        if self.f9CommunicationEnabled.lower() == "on":
+            self.f9CommunicationEnabled = False
+        else:
+            self.f9CommunicationEnabled = False
+        logging.info("f9CommunicationEnabled=" + str(self.f9CommunicationEnabled))
+        self.printVirtualScreenData()
+
+    def init_NiDaq(self):
+        if self.NiDaqPulseEnabled.lower() == "on":
+            # try to add channel
+            task = None
+            try:
+                task = NiDaqPulse(device_name="Dev2/port{0}/line{1}".format(self.port, self.stimulus_line))
+                self.stimulus_output_device = task
+            except nidaqmx.DaqError as e:
+                print(e)
+                if task:
+                    task.stop()
+        else:
+            self.stimulus_output_device = None
+
+    def load_app_config(self):
         self.appConfig = loadCSV(constants.APP_CONFIG_FILE)
         self.vsX = self.getAppConfig("fishScreenStartX")
         self.vsY = self.getAppConfig("fishScreenStartY")
@@ -71,85 +172,15 @@ class App:
         self.camera_control = self.getAppConfig("cameraControl", "str")
         self.data_path = self.getAppConfig("data_path", "str")
         self.image_file_type = self.getAppConfig("image_file_type", "str")
-
+        self.closed_loop = self.getAppConfig("use_closed_loop", "str")
         self.split_rate = self.getAppConfig("split_rate")
-        self.run_start_time = None
-
-        self.deltaX = 0
-        self.deltaY = 0
-
-        self.positionDegreesToVSTable = []
-        self.calcConvertPositionToPixelsTable()  # populate the above table
-        self.queue_reader = None
-        self.queue_writer = None
-        self.camera = None
-        self.writer_process1 = None
-        self.writer_process2 = None
-        self.file_prefix = None
-
-        screen.geometry("+800+800")
-
-        screen.focus_force()
-        if self.NiDaqPulseEnabled.lower() == "on":
-            # try to add channel
-            task = None
-            task2 = None
-            try:
-                task = NiDaqPulse(device_name="Dev2/port{0}/line{1}".format(self.port, self.stimulus_line))
-                self.stimulus_output_device = task
-
-            except nidaqmx.DaqError as e:
-                print(e)
-                if task:
-                    task.stop()
-        else:
-            self.stimulus_output_device = None
-
-        if self.camera_control.lower() == "on":
-            self.setup_camera()
-
-        if self.f9CommunicationEnabled.lower() == "on":
-            self.f9CommunicationEnabled = False
-        else:
-            self.f9CommunicationEnabled = False
-        logging.info("f9CommunicationEnabled=" + str(self.f9CommunicationEnabled))
-        self.printVirtualScreenData()
-
-        # presenting on the projector in maximize mode
-        monitor = self.get_monitors_dimensions(self.projectorOnMonitor)
-        screen.geometry(f"{monitor['width']}x{monitor['height']}+{screen.winfo_screenwidth()}+0")
-
-        self.canvas = Canvas(screen, background="black")
-        self.textVar = tkinter.StringVar()
-        self.label = ttk.Label(self.canvas, textvariable=self.textVar)
-        self.label.config(font=("Courier", 20))
-        self.label.grid(column=0, row=0)
-        self.canvas.pack(fill=BOTH, expand=1)
-        self.vs = self.canvas.create_rectangle(self.vsX, self.vsY, self.vsX + self.vsWidth, self.vsY + self.vsHeight,
-                                               fill=self.vsColor)
-        screen.bind('<Up>', self.processEvent)
-        screen.bind('<Down>', self.processEvent)
-        screen.bind('<Left>', self.processEvent)
-        screen.bind('<Right>', self.processEvent)
-        screen.bind(constants.DEBUG, self.turnDebug)
-        screen.bind(constants.LOCATION, self.changeControlMode)
-        screen.bind(constants.SIZE, self.changeControlMode)
-        screen.bind(constants.UPDATE, self.updateConfig)
-        screen.bind(constants.EXIT, self.leaveProg)
-        screen.bind(constants.RUN, self.manageStimulus)
-        screen.bind(constants.PAUSE, self.manageStimulus)
-        screen.bind(constants.CROSS, self.showCrossAndBoundries)
-        screen.bind(constants.MID_SCREEN, self.showMidScreen)
-        screen.bind('?', self.printHelp)
-        self.printHelp("")
-
-    """
-    setup the camera, this requires
-        getting the fish name 
-        creating the workers and the queues 
-    """
 
     def setup_camera(self):
+        """
+            setup the camera, this requires
+                getting the fish name
+                creating the workers and the queues
+            """
         # get experiment prefix for file names etc.
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         fish_name = input(f"Enter fish name: ")
@@ -202,7 +233,9 @@ class App:
         if self.writer_process2:
             self.writer_process2.join()
             self.writer_process2.terminate()
-        self.screen.destroy()
+        if self.closed_loop.lower() == "on":
+            pass
+        self.screen.quit()
         sys.exit()
 
     def printHelp(self, event):
@@ -246,12 +279,10 @@ class App:
             if self.xMode:
                 self.deleteCross()
                 self.createCross()
-
         return
 
     def manageStimulus(self, event):
         logging.debug(event)
-
         if event.keysym == constants.PAUSE:
             self.state = constants.PAUSE
             if self.sg != "":
@@ -261,6 +292,10 @@ class App:
                 print('EXIT SENT ')
                 self.camera.join()
                 self.camera = None  # this will allow restart
+            if self.closed_loop_background_process:
+                self.stop_event.set()
+                self.closed_loop_background_process.join()
+                self.closed_loop_background_process = None
         elif event.keysym == constants.RUN:
             self.run_start_time = time.time()
             self.state = constants.RUN
@@ -269,8 +304,60 @@ class App:
                 self.writer_process1.start()
                 self.writer_process2.start()
 
-            self.sg = StimulusGenerator(self.canvas, self, self.stimulus_output_device, self.queue_reader)
-            self.runStimuli()
+            if self.closed_loop.lower() == "on":
+                self.start_closed_loop_background()
+            else:
+                self.sg = StimulusGenerator(self.canvas, self, self.stimulus_output_device, self.queue_reader)
+                self.runStimuli()
+
+    def start_closed_loop_background(self):
+        pass
+
+
+
+
+        # if self.state != constants.EXIT:
+        #     # Continuously process frames from queue until 'p' is pressed
+        #     try:
+        #         i, image_result = self.queue_writer.get_nowait()
+        #         self.closed_loop_class.process_frame(image_result)
+        #     except:
+        #         pass  # If no frame is available, just continue
+        #
+        #     # Check again after a short delay
+        #     self.screen.after(0, self.run_closed_loop)
+
+
+
+        # while(i):
+        #     i, image_result = self.queue_writer.get()
+        #     self.closed_loop_class.process_frame(image_result)
+        # if self.camera:
+        #     self.writer_process1.join()
+        #     self.writer_process2.join()
+        #     self.camera = None  # to allow re-run
+        #     # if we got here than all other processes are done (due to join) and we have a message waiting for us
+        #     i, image_result = self.queue_writer.get()
+        #     width = image_result[0]
+        #     height = image_result[1]
+        #     file_prefix = image_result[2]
+        #
+        #     f = open(f'{self.data_path}\\create_video.bat', "a")
+        #     f.write(
+        #         f"C:\\Users\\owner\\Documents\\Code\\StimulusGenerator\\venv\\Scripts\\python .\\create_video.py \n")
+        #     f.write("pause\nexit\n")
+        #     f.close()
+        #
+        #     self.data_path = self.getAppConfig("data_path", "str")
+        #     self.data_path = f"{self.data_path}\\\\{self.file_prefix}"
+        #
+        #     f = open(f'{self.data_path}\\create_video.py', "a")
+        #     f.write("import sys\n")
+        #     f.write(f"sys.path.append('C:\\\\Users\\\\owner\\\\Documents\\\\Code\\\\StimulusGenerator')\n")
+        #     f.write(f"from utils import opencv_create_video\n")
+        #     f.write(
+        #         f"opencv_create_video('{file_prefix}', {height}, {width}, '{self.data_path}', '{self.image_file_type}')\n")
+        #     f.close()
 
     def runStimuli(self):  # this is main loop of stimulus
         if self.state == constants.PAUSE:
@@ -479,8 +566,23 @@ class App:
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
+    appConfig = loadCSV(constants.APP_CONFIG_FILE)
+
+    closed_loop = appConfig[0]["use_closed_loop"]
+    camera_control = appConfig[0]["cameraControl"]
+    if closed_loop.lower() == "on" and camera_control.lower() != "on":
+        self.leaveProg("can't run closed loop without camera")
+    pca_and_predict = None
+    image_processor = None
+    tail_tracker = None
+    bout_recognizer = None
+    if closed_loop.lower() == "on":
+        calibrator = Calibrator(calculate_PCA=True, live_camera=True,
+                                num_frames=number_of_frames_calibration, plot_bout_detector=debug_bout_detector)
+        [pca_and_predict, image_processor, tail_tracker,bout_recognizer] = calibrator.start_calibrating()
     root = Tk()
     root.title("Shacoof fish Stimuli Generator ")
     utils.dark_title_bar(root)
-    app = App(root)
+    app = App(root,pca_and_predict, image_processor, tail_tracker, bout_recognizer)
     root.mainloop()
+    sys.exit()

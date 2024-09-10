@@ -44,6 +44,9 @@ class ImageProcessor:
             except Exception as e:
                 print(f"Error loading image: {e}")
 
+    def load_mat(self, mat):
+        self.image_matrix = mat
+
     def get_image_matrix(self):
         """
         Returns the image matrix.

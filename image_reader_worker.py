@@ -438,7 +438,7 @@ def main():
 
 def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in):
     global queue_reader, queue_writer, file_prefix, data_path, writer_process, camera_output_device
-    camera_output_device = NiDaqPulse(device_name=f"Dev2/port1/line6")
+    camera_output_device = None
     data_path = path_in
     file_prefix = file_prefix_in
     name = multiprocessing.current_process().name

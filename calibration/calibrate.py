@@ -68,8 +68,8 @@ class Calibrator:
     def get_area_of_interest(self):
         first_img_arr = self.first_image
         selector = PointSelector(first_img_arr)
-        #points = selector.select_points()
-        points = [(1,2),(93,4)]
+        points = selector.select_points()
+        #points = [(1,2),(93,4)]
         self.head_origin = [round(value) for value in list(points[0])]
         self.head_dest =  [round(value) for value in list(points[1])]
         self.focal_lim_x = [self.head_origin[0] - FOCAL_LIM_X_MINUS, self.head_origin[0] + FOCAL_LIM_X_PLUS]
