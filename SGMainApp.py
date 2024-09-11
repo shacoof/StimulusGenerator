@@ -18,6 +18,7 @@ import nidaqmx
 from screeninfo import get_monitors
 import utils
 from NiDaqPulse import NiDaqPulse
+from image_processor.ImageProcessor import ImageProcessor
 from utils import writeCSV
 from math import pi, cos
 import sys
@@ -29,6 +30,7 @@ from StimuliGenerator import StimulusGenerator
 from main_closed_loop import ClosedLoop
 from closed_loop_config import *
 from calibration.calibrate import Calibrator
+from image_processor.ImageProcessor import ImageProcessor
 import image_reader_worker
 import image_writer_worker
 import constants
@@ -38,6 +40,24 @@ import constants
 # TODO allow pause, run after pause
 # TODO lose focus at the end of the run... maybe due to print?
 
+
+def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer,tail_tracker,min_frame, mean_frame, head_origin):
+    # Target function for real-time image processing
+    logging.info("Closed loop started")
+
+    image_processor = ImageProcessor(False)
+    image_processor.calc_masks(min_frame, mean_frame, head_origin)
+    closed_loop_class = ClosedLoop(pca_and_predict, image_processor, tail_tracker, bout_recognizer)
+    while state == constants.RUN:
+        try:
+            i, image_result = queue_writer.get(timeout=1)  # Fetch from the queue
+            closed_loop_class.process_frame(image_result)  # Process the frame
+            print("hi")
+        except:
+            logging.warning("Queue is empty, no image to process.")
+
+    # Clean-up logic for closed-loop background when state is not RUN
+    logging.info("Closed loop background finished")
 
 class App:
     sg = ""
@@ -95,10 +115,6 @@ class App:
         self.vs = self.canvas.create_rectangle(self.vsX, self.vsY, self.vsX + self.vsWidth, self.vsY + self.vsHeight,
                                                fill=self.vsColor)
 
-        # Init closed loop
-        if self.closed_loop.lower() == "on":
-            self.closed_loop_class = ClosedLoop(self.pca_and_predict, self.image_processor, self.tail_tracker
-                                                , self.bout_recognizer)
 
         # Init NiDaq
         if self.NiDaqPulseEnabled.lower() == "on":
@@ -291,73 +307,39 @@ class App:
                 self.queue_reader.put('exit')
                 print('EXIT SENT ')
                 self.camera.join()
-                self.camera = None  # this will allow restart
-            if self.closed_loop_background_process:
-                self.stop_event.set()
-                self.closed_loop_background_process.join()
-                self.closed_loop_background_process = None
+                self.camera.terminate()
+            if self.writer_process1:
+                self.writer_process1.join()
+                self.writer_process1.terminate()
+            if self.writer_process2:
+                self.writer_process2.join()
+                self.writer_process2.terminate()
+
+            if self.closed_loop.lower() == "on":
+                self.closed_loop_process.terminate()  # Terminate the closed-loop process
+
         elif event.keysym == constants.RUN:
             self.run_start_time = time.time()
             self.state = constants.RUN
+
             if self.camera:
                 self.camera.start()
                 self.writer_process1.start()
                 self.writer_process2.start()
 
             if self.closed_loop.lower() == "on":
-                self.start_closed_loop_background()
+                # Start the closed-loop process
+                self.closed_loop_process = multiprocessing.Process(
+                    target=start_closed_loop_background,
+                    args=(self.queue_writer, self.state, self.pca_and_predict,self.bout_recognizer,self.tail_tracker,
+                          self.image_processor.min_frame, self.image_processor.mean_frame,
+                          self.image_processor.head_origin))
+
+                self.closed_loop_process.start()  # Start the process in the background
             else:
                 self.sg = StimulusGenerator(self.canvas, self, self.stimulus_output_device, self.queue_reader)
                 self.runStimuli()
 
-    def start_closed_loop_background(self):
-        pass
-
-
-
-
-        # if self.state != constants.EXIT:
-        #     # Continuously process frames from queue until 'p' is pressed
-        #     try:
-        #         i, image_result = self.queue_writer.get_nowait()
-        #         self.closed_loop_class.process_frame(image_result)
-        #     except:
-        #         pass  # If no frame is available, just continue
-        #
-        #     # Check again after a short delay
-        #     self.screen.after(0, self.run_closed_loop)
-
-
-
-        # while(i):
-        #     i, image_result = self.queue_writer.get()
-        #     self.closed_loop_class.process_frame(image_result)
-        # if self.camera:
-        #     self.writer_process1.join()
-        #     self.writer_process2.join()
-        #     self.camera = None  # to allow re-run
-        #     # if we got here than all other processes are done (due to join) and we have a message waiting for us
-        #     i, image_result = self.queue_writer.get()
-        #     width = image_result[0]
-        #     height = image_result[1]
-        #     file_prefix = image_result[2]
-        #
-        #     f = open(f'{self.data_path}\\create_video.bat', "a")
-        #     f.write(
-        #         f"C:\\Users\\owner\\Documents\\Code\\StimulusGenerator\\venv\\Scripts\\python .\\create_video.py \n")
-        #     f.write("pause\nexit\n")
-        #     f.close()
-        #
-        #     self.data_path = self.getAppConfig("data_path", "str")
-        #     self.data_path = f"{self.data_path}\\\\{self.file_prefix}"
-        #
-        #     f = open(f'{self.data_path}\\create_video.py', "a")
-        #     f.write("import sys\n")
-        #     f.write(f"sys.path.append('C:\\\\Users\\\\owner\\\\Documents\\\\Code\\\\StimulusGenerator')\n")
-        #     f.write(f"from utils import opencv_create_video\n")
-        #     f.write(
-        #         f"opencv_create_video('{file_prefix}', {height}, {width}, '{self.data_path}', '{self.image_file_type}')\n")
-        #     f.close()
 
     def runStimuli(self):  # this is main loop of stimulus
         if self.state == constants.PAUSE:
@@ -580,6 +562,7 @@ if __name__ == '__main__':
         calibrator = Calibrator(calculate_PCA=True, live_camera=True,
                                 num_frames=number_of_frames_calibration, plot_bout_detector=debug_bout_detector)
         [pca_and_predict, image_processor, tail_tracker,bout_recognizer] = calibrator.start_calibrating()
+
     root = Tk()
     root.title("Shacoof fish Stimuli Generator ")
     utils.dark_title_bar(root)

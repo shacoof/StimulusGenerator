@@ -23,10 +23,12 @@ class ImageProcessor:
         self.tail_mask_x = None
         self.tail_mask_y = None
         self.kernel = None
+        self.head_origin = None
         self.is_live_camera = is_live_camera
         if is_live_camera and camera is None:
             raise RuntimeError("need to supply camera")
         self.camera = camera
+
 
 
     def load_image(self, image_path=""):
@@ -91,6 +93,7 @@ class ImageProcessor:
         head_mask = min_frame[head_mask_y[0]:head_mask_y[1], head_mask_x[0]:head_mask_x[1]]
         head_mask[head_mask > HEAD_MASK_THRESHOLD] = 0
         min_frame[head_mask_y[0]:head_mask_y[1], head_mask_x[0]:head_mask_x[1]] = head_mask
+        self.head_origin = head_origin
         self.min_frame = min_frame
         self.focal_lim_x = focal_lim_x
         self.focal_lim_y = focal_lim_y

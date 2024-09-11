@@ -1,5 +1,5 @@
 #user input
-debug_bout_detector = False
+debug_bout_detector = True
 debug_tail = False
 debug_PCA = False
 use_camera = True
