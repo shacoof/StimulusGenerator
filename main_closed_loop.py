@@ -20,10 +20,9 @@ class ClosedLoop:
         self.bout_frames = np.zeros((frames_from_bout, 105, 2))
         self.current_frame = 0
         self.renderer = Renderer()
+        self.multiprocess_prediction_queue = multiprocess_prediction_queue
 
-
-    def process_frame(self, frame):
-        print("hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii")
+    def process_frame(self, frame, ):
         self.current_frame += 1
         self.image_processor.load_mat(frame)
         self.bout_recognizer.update(self.image_processor.get_image_matrix())

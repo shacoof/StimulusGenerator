@@ -3,6 +3,7 @@ from tkinter import Canvas, Tk, BOTH
 from tkinter import ttk
 from tkinter.ttk import tkinter
 from screeninfo import get_monitors
+from closed_loop_support import *
 import nidaqmx
 import time
 import sys
@@ -27,7 +28,6 @@ import constants
 import multiprocessing
 from utils import writeCSV, opencv_create_video
 from StimuliGenerator import StimulusGenerator
-from main_closed_loop import ClosedLoop
 from closed_loop_config import *
 from calibration.calibrate import Calibrator
 from image_processor.ImageProcessor import ImageProcessor
@@ -41,28 +41,10 @@ import constants
 # TODO lose focus at the end of the run... maybe due to print?
 
 
-def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer,tail_tracker,min_frame,
-                                 mean_frame, head_origin, queue_predictions):
-    # Target function for real-time image processing
-    logging.info("Closed loop started")
-    image_processor = ImageProcessor(False)
-    image_processor.calc_masks(min_frame, mean_frame, head_origin)
-    closed_loop_class = ClosedLoop(pca_and_predict, image_processor, tail_tracker, bout_recognizer,queue_predictions)
-    while state.value == 1:
-        try:
-            i, image_result = queue_writer.get(timeout=1)  # Fetch from the queue
-            closed_loop_class.process_frame(image_result)  # Process the frame
-            print("hi")
-        except:
-            logging.warning("Queue is empty, no image to process.")
-
-    # Clean-up logic for closed-loop background when state is not RUN
-    logging.info("Closed loop background finished")
-
 class App:
     sg = ""
 
-    def __init__(self, screen,pca_and_predict, image_processor, tail_tracker, bout_recognizer):
+    def __init__(self, screen, pca_and_predict, image_processor, tail_tracker, bout_recognizer):
         # Init vars
         self.pca_and_predict = pca_and_predict
         self.image_processor = image_processor
@@ -339,10 +321,15 @@ class App:
                           self.image_processor.head_origin, self.queue_closed_loop_predication))
 
                 self.closed_loop_process.start()  # Start the process in the background
+                self.sg = StimuliGeneratorClosedLoop(self.canvas, self, self.stimulus_output_device, self.self.queue_closed_loop_predication)
+                self.runStimuliClosedLoop()
             else:
                 self.sg = StimulusGenerator(self.canvas, self, self.stimulus_output_device, self.queue_reader)
                 self.runStimuli()
 
+    def runStimuliClosedLoop(self):
+        while self.state == constants.RUN:
+            self.sg.run_stimuli()
 
     def runStimuli(self):  # this is main loop of stimulus
         if self.state == constants.PAUSE:
