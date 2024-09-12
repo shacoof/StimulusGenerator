@@ -7,7 +7,7 @@ import os
 import time
 
 class ClosedLoop:
-    def __init__(self,pca_and_predict, image_processor, tail_tracker, bout_recognizer):
+    def __init__(self,pca_and_predict, image_processor, tail_tracker, bout_recognizer, multiprocess_prediction_queue):
         """
         Preforms closed loop
         """
@@ -39,10 +39,11 @@ class ClosedLoop:
                 self.is_bout = False
                 self.bout_index = 0
                 angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(bout_frames, to_plot=debug_PCA)
+                self.bout_frames = np.zeros((frames_from_bout, 105, 2))
+                new_angle, new_distance = self.renderer.calc_new_angle_and_size(angle, distance)
+                self.multiprocess_prediction_queue.put((angle, distance))
                 print(
                     f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
-                self.bout_frames = np.zeros((frames_from_bout, 105, 2))
-                self.renderer.calc_new_angle_and_size(angle, distance)
         else:
             verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
             if verdict:

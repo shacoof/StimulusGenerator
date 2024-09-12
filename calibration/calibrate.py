@@ -114,6 +114,7 @@ class Calibrator:
             pca_and_predict = PCA(prediction_matrix_angle=B_angle, prediction_matrix_distance=B_distance, V=V, S=S)
         self.pca_and_predict = pca_and_predict
         self.bout_recognizer = self._init_bout_recognizer()
+        self.camera.close()
         return self.pca_and_predict, self.image_processor, self.tail_tracker, self.bout_recognizer
 
 

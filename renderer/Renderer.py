@@ -30,6 +30,7 @@ class Renderer:
             self.reset_food()
         else:
             self.size = round(self.current_distance_to_prey * (-7/4) + 18) # rescale to range of 18 to 4
+        return self.angle, self.distance
 
 
     def reset_food(self):
