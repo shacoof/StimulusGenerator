@@ -43,6 +43,11 @@ class StimuliGeneratorClosedLoop:
         # Ensure a stimulus is set and running
         if self.current_stimulus and self.current_stimulus.status == RUNNING:
             self.current_stimulus.move()
+            if not self.current_stimulus.trigger_out_sent:
+                if self.output_device is not None:
+                    self.output_device.give_pulse()
+                    self.app.setDebugText("Sent pulse for i={0}".format(i, self.current_stimulus))
+                self.current_stimulus.trigger_out_sent = True
 
     def run_stimuli_closed_loop(self):
         self.run_stimulus()
@@ -78,7 +83,6 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
         if not queue_writer.empty():
             i, image_result = queue_writer.get(timeout=1)  # Fetch from the queue
             closed_loop_class.process_frame(image_result)  # Process the frame
-            print("hi")
         else:
             pass
             #logging.warning("Queue is empty, no image to process.")

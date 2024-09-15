@@ -298,8 +298,8 @@ class App:
             if self.writer_process2:
                 self.writer_process2.join()
                 self.writer_process2.terminate()
-
             if self.closed_loop.lower() == "on":
+                self.closed_loop_process.join()
                 self.closed_loop_process.terminate()  # Terminate the closed-loop process
 
         elif event.keysym == constants.RUN:
