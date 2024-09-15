@@ -36,7 +36,7 @@ from NiDaqPulse import NiDaqPulse
 # see NUM_IMAGES
 # each item is [timestamp, frame-number, stimulus-message ]
 image_array = [['timestamp', 'image no', 'stimulus']]
-global queue_reader, queue_writer, writer_process
+global queue_reader, queue_writer, writer_process, images_queue
 global file_prefix, data_path, camera_output_device
 
 
@@ -228,7 +228,7 @@ def print_device_info(nodemap):
 
 
 def acquire_images(cam, nodemap):
-    global queue_reader, queue_writer
+    global queue_reader, queue_writer, images_queue
     global file_prefix
     """
     This function acquires 30 images from a device, stores them in a list, and returns the list.
@@ -308,6 +308,8 @@ def acquire_images(cam, nodemap):
 
                     # note that I already acquire the image, so even if exit sent I still have 1 image in the buffer
                     queue_writer.put((i, image_result.GetNDArray()))
+                    if images_queue:
+                        images_queue.put((i, image_result.GetNDArray()))
                     image_result.Release()
                     i += 1
 
@@ -436,8 +438,8 @@ def main():
     return result
 
 
-def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in):
-    global queue_reader, queue_writer, file_prefix, data_path, writer_process, camera_output_device
+def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in, images_queue_in):
+    global queue_reader, queue_writer, file_prefix, data_path, writer_process, camera_output_device, images_queue
     camera_output_device = None
     data_path = path_in
     file_prefix = file_prefix_in
@@ -445,6 +447,7 @@ def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix
     print(f"******** queue {name} running, camera output device = {camera_output_device}")
     queue_reader = queue_reader_in
     queue_writer = queue_writer_in
+    images_queue = images_queue_in
     main()
     if camera_output_device is not None:
         camera_output_device.stop()

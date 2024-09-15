@@ -76,6 +76,7 @@ class App:
         self.calcConvertPositionToPixelsTable()  # populate the above table
         self.queue_reader = None
         self.queue_writer = None
+        self.images_queue = None
         self.camera = None
         self.writer_process1 = None
         self.writer_process2 = None
@@ -191,11 +192,13 @@ class App:
         shutil.copyfile(constants.STIMULUS_CONFIG, f"{self.data_path}\\{constants.STIMULUS_CONFIG}")
         self.queue_reader = multiprocessing.Queue()  # communication queue to the worker
         self.queue_writer = multiprocessing.Queue()  # communication queue to the worker
+        if self.closed_loop.lower() == "on":
+            self.images_queue = multiprocessing.Queue()  # images to read in closed loop image processing
         self.camera = multiprocessing.Process(name='camera_control_worker',  # Creation of the worker
                                               target=image_reader_worker.camera_control_worker,
                                               args=(
                                                   self.queue_reader, self.queue_writer, self.data_path,
-                                                  self.file_prefix))
+                                                  self.file_prefix, self.images_queue))
         self.writer_process1 = multiprocessing.Process(name='image_writer_worker1',
                                                        target=image_writer_worker.image_writer_worker,
                                                        args=(self.queue_writer, self.data_path, self.image_file_type))
@@ -316,7 +319,7 @@ class App:
                 self.queue_closed_loop_predication = multiprocessing.Queue()  # communication queue to the worker
                 self.closed_loop_process = multiprocessing.Process(
                     target=start_closed_loop_background,
-                    args=(self.queue_writer, self.multiprocess_state_is_running, self.pca_and_predict,self.bout_recognizer,self.tail_tracker,
+                    args=(self.images_queue, self.multiprocess_state_is_running, self.pca_and_predict,self.bout_recognizer,self.tail_tracker,
                           self.image_processor.min_frame, self.image_processor.mean_frame,
                           self.image_processor.head_origin, self.queue_closed_loop_predication))
 
