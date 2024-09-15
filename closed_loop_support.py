@@ -1,77 +1,70 @@
 import logging
 from image_processor.ImageProcessor import ImageProcessor
 from main_closed_loop import ClosedLoop
-
+from Stimulus import Stimulus
+from constants import *
 
 class StimuliGeneratorClosedLoop:
-    def __init__(self, canvas, app, output_device=None, queue=None):
+    def __init__(self, canvas, app, closed_loop_pred_queue, output_device=None, camera_queue=None):
         self.stimulus_struct = {
             "exitCriteria": "Time",
-            "startX": 90,
-            "startY": 600,
-            "endX": 90,
-            "endY": 600,
-            "repetitions": 0,
-            "fastSpeed": 0,
-            "slowSpeed": 0,
-            "startShapeRadius": 4,
-            "endShapeRadius": 4,
-            "fastDuration": 50,
-            "slowDuration": 50,
-            "startMode": "WITH",
-            "delay": 0,
-            "duration": 100,  # ms
+            "startX": '90',
+            "startY": '480',
+            "endX": '90',
+            "endY": '480',
+            "repetitions": '0',
+            "fastSpeed": '0',
+            "slowSpeed": '0',
+            "startShapeRadius": '4',
+            "endShapeRadius": '4',
+            "fastDuration": '50',
+            "slowDuration": '50',
+            "startMode": "AFTER",
+            "delay": '0',
+            "duration": '500',  # ms
             "xType": "degrees"
         }
-        self.queue = queue
+        self.camera_queue = camera_queue
+        self.closed_loop_pred_queue = closed_loop_pred_queue
         self.output_device = output_device
         self.batchNo = 0
         self.canvas = canvas
         self.app = app
-        self.stimulusObjList = []
-        stim_id = 0
-        # add initial stimulus
-        self.stimulusObjList.append(Stimulus(self.stimulus_struct, canvas, app, stim_id))
+        self.current_stimulus = Stimulus(self.stimulus_struct, canvas, app, 0)
         self.stim_id = 1
-        self.print_stimulus_list()
 
-    def terminate_run(self):
-        for i in self.stimulusObjList:
-            i.terminate_run()
 
-    def print_stimulus_list(self):
-        for i in self.stimulusObjList:
-            print(vars(i))
+    def stop_stimulus(self):
+        if self.current_stimulus:
+            self.current_stimulus.terminate_run()
+            self.current_stimulus.status = DONE  # Set the status to DONE
 
-    def get_stimulus_state(self, stimulus):
-        return stimulus.batchNo, stimulus.status, stimulus.startMode
+    def run_stimulus(self):
+        # Ensure a stimulus is set and running
+        if self.current_stimulus and self.current_stimulus.status == RUNNING:
+            self.current_stimulus.move()
 
-    def run_stimuli(self):
-        while(not self.queue.Empty):
-            # add to stimulus object list
-            angle, distance = self.queue.pop()
-            self.modify_stimulus_dict(angle,distance)
-            self.stimulusObjList.append(Stimulus(self.stimulus_struct, canvas, app, stim_id))
+    def run_stimuli_closed_loop(self):
+        self.run_stimulus()
+        try:
+            # Check if there is a new stimulus from the queue
+            if not self.closed_loop_pred_queue.empty():
+                angle, distance = self.closed_loop_pred_queue.get()
+                self.modify_stimulus_dict(angle,distance)
+                self.stop_stimulus()
+                self.current_stimulus = Stimulus(self.stimulus_struct, self.canvas, self.app, self.stim_id)
+                self.current_stimulus.init_shape(0)
+                self.stim_id += 1
+                print(f"New stimulus added with ID: {self.stim_id}")
+        except Exception as e:
+            print(f"Error processing queue: {e}")
 
-        # last stimulus was completed
-        i = 0
-        s = ""
-        # if we got here *then* the object in stimulusObjListLoc is not done
-        # we will loop on all the running shapes and progress them
-        while i < len(self.stimulusObjList) and self.stimulusObjList[i].status == RUNNING:
-            self.stimulusObjList[i].move()
-            if not self.stimulusObjList[i].trigger_out_sent:
-                if self.output_device is not None:
-                    self.output_device.give_pulse()
-                    self.app.setDebugText("Sent pulse for i={0}".format(i, self.stimulusObjList[i]))
-                self.stimulusObjList[i].trigger_out_sent = True
-            s += str(self.stimulusObjList[i]) + "\n"
-            i += 1
-        return RUNNING
 
     def modify_stimulus_dict(self, angle, distance):
-        self.stimulus_struct["startX"] = angle
-        self.stimulus_struct["endShapeRadius"] = distance
+        self.stimulus_struct["startX"] = self.stimulus_struct["endX"]
+        self.stimulus_struct["endX"] = str(angle)
+        self.stimulus_struct["startShapeRadius"] = self.stimulus_struct["endShapeRadius"]
+        self.stimulus_struct["endShapeRadius"] = str(distance)
 
 
 def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer,tail_tracker,min_frame,
@@ -82,13 +75,13 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
     image_processor.calc_masks(min_frame, mean_frame, head_origin)
     closed_loop_class = ClosedLoop(pca_and_predict, image_processor, tail_tracker, bout_recognizer,queue_predictions)
     while state.value == 1:
-        try:
+        if not queue_writer.empty():
             i, image_result = queue_writer.get(timeout=1)  # Fetch from the queue
             closed_loop_class.process_frame(image_result)  # Process the frame
-
             print("hi")
-        except queue.Empty:
-            logging.warning("Queue is empty, no image to process.")
+        else:
+            pass
+            #logging.warning("Queue is empty, no image to process.")
 
     # Clean-up logic for closed-loop background when state is not RUN
     logging.info("Closed loop background finished")

@@ -64,7 +64,6 @@ class Calibrator:
         self.tail_tracker = TailTracker(self.head_origin, self.head_dest)
 
 
-
     def get_area_of_interest(self):
         first_img_arr = self.first_image
         selector = PointSelector(first_img_arr)
@@ -144,6 +143,7 @@ class Calibrator:
                 self.tail_tracker.load_binary_image(binary_image)
                 tail_points = self.tail_tracker.get_tail_points(i)
                 tail_data[i, :, :] = tail_points
+                #self.tail_tracker.plot_points(6)
         #np.save('all_tail_data2.npy', tail_data)
         return tail_data
 

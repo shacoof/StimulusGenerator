@@ -3,7 +3,7 @@ from tkinter import Canvas, Tk, BOTH
 from tkinter import ttk
 from tkinter.ttk import tkinter
 from screeninfo import get_monitors
-from closed_loop_support import *
+from closed_loop_support import StimuliGeneratorClosedLoop, start_closed_loop_background
 import nidaqmx
 import time
 import sys
@@ -321,15 +321,17 @@ class App:
                           self.image_processor.head_origin, self.queue_closed_loop_predication))
 
                 self.closed_loop_process.start()  # Start the process in the background
-                self.sg = StimuliGeneratorClosedLoop(self.canvas, self, self.stimulus_output_device, self.self.queue_closed_loop_predication)
+                self.sg = StimuliGeneratorClosedLoop(self.canvas, self, self.queue_closed_loop_predication,self.stimulus_output_device, self.queue_reader)
                 self.runStimuliClosedLoop()
             else:
                 self.sg = StimulusGenerator(self.canvas, self, self.stimulus_output_device, self.queue_reader)
                 self.runStimuli()
 
     def runStimuliClosedLoop(self):
-        while self.state == constants.RUN:
-            self.sg.run_stimuli()
+        if self.state != constants.RUN:
+            return
+        self.sg.run_stimuli_closed_loop()
+        self.canvas.after(constants.SLEEP_TIME, self.runStimuliClosedLoop)
 
     def runStimuli(self):  # this is main loop of stimulus
         if self.state == constants.PAUSE:

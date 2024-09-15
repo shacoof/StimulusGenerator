@@ -22,34 +22,44 @@ class ClosedLoop:
         self.renderer = Renderer()
         self.multiprocess_prediction_queue = multiprocess_prediction_queue
 
-    def process_frame(self, frame, ):
-        self.current_frame += 1
-        self.image_processor.load_mat(frame)
-        self.bout_recognizer.update(self.image_processor.get_image_matrix())
-        # if this is a bout frame
-        if self.is_bout:
-            self.bout_index += 1
-            binary_image = self.image_processor.preprocess_binary()
-            self.tail_tracker.load_binary_image(binary_image)
-            tail_points = self.tail_tracker.get_tail_points(self.current_frame)
-            self.bout_frames[self.bout_index, :, :] = tail_points
-            #last bout frame
-            if self.bout_index == frames_from_bout:
-                self.is_bout = False
-                self.bout_index = 0
-                angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(bout_frames, to_plot=debug_PCA)
-                self.bout_frames = np.zeros((frames_from_bout, 105, 2))
-                new_angle, new_distance = self.renderer.calc_new_angle_and_size(angle, distance)
-                self.multiprocess_prediction_queue.put((angle, distance))
-                print(
-                    f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
+    def process_frame(self, frame):
+        time.sleep(2)
+        if self.current_frame % 2 ==0:
+            new_angle, new_distance = self.renderer.calc_new_angle_and_size(40, 1)
         else:
-            verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
-            if verdict:
-                self.bout_index += 1
-                binary_image = self.image_processor.preprocess_binary()
-                self.tail_tracker.load_binary_image(binary_image)
-                tail_points = self.tail_tracker.get_tail_points(self.current_frame)
-                self.bout_frames[self.bout_index, :, :] = tail_points
+            new_angle, new_distance = self.renderer.calc_new_angle_and_size(-40, 1)
+        print(f"angle {new_angle} distance {new_distance}")
+        self.multiprocess_prediction_queue.put((new_angle, new_distance))
+        self.current_frame += 1
+
+
+        # self.current_frame += 1
+        # self.image_processor.load_mat(frame)
+        # self.bout_recognizer.update(self.image_processor.get_image_matrix())
+        # # if this is a bout frame
+        # if self.is_bout:
+        #     self.bout_index += 1
+        #     binary_image = self.image_processor.preprocess_binary()
+        #     self.tail_tracker.load_binary_image(binary_image)
+        #     tail_points = self.tail_tracker.get_tail_points(self.current_frame)
+        #     self.bout_frames[self.bout_index, :, :] = tail_points
+        #     #last bout frame
+        #     if self.bout_index == frames_from_bout:
+        #         self.is_bout = False
+        #         self.bout_index = 0
+        #         angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(bout_frames, to_plot=debug_PCA)
+        #         self.bout_frames = np.zeros((frames_from_bout, 105, 2))
+        #         new_angle, new_distance = self.renderer.calc_new_angle_and_size(angle, distance)
+        #         self.multiprocess_prediction_queue.put((angle, distance))
+        #         print(
+        #             f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
+        # else:
+        #     verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
+        #     if verdict:
+        #         self.bout_index += 1
+        #         binary_image = self.image_processor.preprocess_binary()
+        #         self.tail_tracker.load_binary_image(binary_image)
+        #         tail_points = self.tail_tracker.get_tail_points(self.current_frame)
+        #         self.bout_frames[self.bout_index, :, :] = tail_points
 
 
