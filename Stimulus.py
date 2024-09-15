@@ -243,7 +243,8 @@ class Stimulus:
                 (self.timeInStimulus >= self.duration and self.exitCriteria.lower() == TIME)):
             logging.info("repetition completed !")
             self.repNo += 1
-            self.canvas.delete(self.shape)
+            if self.app.closed_loop.lower() != "on":
+                self.canvas.delete(self.shape)
             # we finished all repetitions for this stimulus, and we need to move to next stimulus
             if self.repNo >= self.repetitions:
                 self.status = DONE

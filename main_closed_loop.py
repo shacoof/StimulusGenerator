@@ -23,7 +23,7 @@ class ClosedLoop:
         self.multiprocess_prediction_queue = multiprocess_prediction_queue
 
     def process_frame(self, frame):
-        time.sleep(2)
+        time.sleep(1)
         if self.current_frame % 2 ==0:
             new_angle, new_distance = self.renderer.calc_new_angle_and_size(40, 1)
         else:
