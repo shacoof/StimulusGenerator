@@ -31,6 +31,7 @@ class Calibrator:
         self.min_frame = None
         self.head_origin = None
         self.head_dest = None
+        self.tail_tip = None
         self.focal_lim_x = None
         self.focal_lim_y = None
         self.pca_and_predict = None
@@ -71,6 +72,7 @@ class Calibrator:
         #points = [(1,2),(93,4)]
         self.head_origin = [round(value) for value in list(points[0])]
         self.head_dest =  [round(value) for value in list(points[1])]
+        self.tail_tip = [round(value) for value in list(points[2])]
         self.focal_lim_x = [self.head_origin[0] - FOCAL_LIM_X_MINUS, self.head_origin[0] + FOCAL_LIM_X_PLUS]
         self.focal_lim_y = [self.head_origin[1] - FOCAL_LIM_Y_MINUS, self.head_origin[1] + FOCAL_LIM_Y_PLUS]
 
@@ -149,9 +151,8 @@ class Calibrator:
 
     def _init_bout_recognizer(self):
         first_img_arr = self.first_image
-        bout_recognizer = RecognizeBout(first_img_arr, 10, 0.9,
-                                        7, self.image_processor.get_tail_mask_x(),
-                                        self.image_processor.get_tail_mask_y(), 30, self.plot_bout_detector)
+        bout_recognizer = RecognizeBout(first_img_arr, 10, 3,
+                                        7, self.plot_bout_detector, self.tail_tip)
         return bout_recognizer
 
 

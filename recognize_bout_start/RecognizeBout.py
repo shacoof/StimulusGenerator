@@ -10,31 +10,35 @@ logging.getLogger('matplotlib.font_manager').setLevel(logging.WARNING)
 
 
 class RecognizeBout:
-    def __init__(self, mean_frame_from_calibration, bout_threshold_pixel,
-                 sum_moving_threshold_percentage,frame_memory, tail_mask_x, tail_mask_y,tail_margins, to_plot):
+    def __init__(self, first_frame_from_calibration, bout_threshold_pixel,
+                 sum_moving_threshold_percentage, frame_memory, to_plot, tail_tip, x_dist_from_tail = 13,
+                 y_dist_from_tail = 30):
         """
         Recognizes bouts and ibis each frame
-        :param mean_frame_from_calibration: for the first frame compare to the mean frame from calibration
+        :param first_frame_from_calibration: for the first frame compare to the mean frame from calibration
         :param threshold: threshold of diff between frame to decide if this is the start of a bout
         """
-        mean_frame_from_calibration = mean_frame_from_calibration.astype('uint8')
+        first_frame_from_calibration = first_frame_from_calibration.astype('uint8')
         self.bout_threshold = bout_threshold_pixel
         self.sum_moving_threshold_percentage = sum_moving_threshold_percentage
         self.recent_frames_percentage = deque(maxlen=frame_memory)
         self.frame_memory = frame_memory
         self.previous_frame = None
-        self.tail_mask_x = tail_mask_x
-        self.tail_mask_y = tail_mask_y
-        self.tail_margins = tail_margins
-        self.current_frame = mean_frame_from_calibration[self.tail_mask_y[0]:self.tail_mask_y[1],self.tail_mask_x[0] + self.tail_margins :self.tail_mask_x[1] - self.tail_margins]
+        self.tail_tip = tail_tip
+        self.x_dist_from_tail = x_dist_from_tail
+        self.y_dist_from_tail = y_dist_from_tail
+        self.current_frame = first_frame_from_calibration[self.tail_tip[1] - self.y_dist_from_tail: self.tail_tip[1] + self.y_dist_from_tail,
+                             self.tail_tip[0] - self.x_dist_from_tail: self.tail_tip[0] + self.x_dist_from_tail]
         self.num_pixels = self.current_frame.shape[0]*self.current_frame.shape[1]
         self.to_plot = to_plot
         self.percentage = 0
         self.movement_mask = None
 
 
+
     def update(self, frame):
-        cropped_frame = frame[self.tail_mask_y[0]:self.tail_mask_y[1],self.tail_mask_x[0] + self.tail_margins :self.tail_mask_x[1] - self.tail_margins]
+        cropped_frame = frame[self.tail_tip[1] - self.y_dist_from_tail: self.tail_tip[1] + self.y_dist_from_tail,
+                             self.tail_tip[0] - self.x_dist_from_tail: self.tail_tip[0] + self.x_dist_from_tail]
         self.previous_frame = self.current_frame
         self.current_frame = cropped_frame
         # Compute the absolute difference between the frames

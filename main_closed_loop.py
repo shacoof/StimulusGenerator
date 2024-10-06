@@ -24,18 +24,18 @@ class ClosedLoop:
         self.time = 0
 
     def process_frame(self, frame):
-        time_now = time.time()
-        print(f"time {time_now - self.time}")
-        self.time = time_now
+        # time_now = time.time()
+        # print(f"time {time_now - self.time}")
+        # self.time = time_now
 
-        # time.sleep(1)
-        # if self.current_frame % 2 ==0:
-        #     new_angle, new_distance = self.renderer.calc_new_angle_and_size(40, 1)
-        # else:
-        #     new_angle, new_distance = self.renderer.calc_new_angle_and_size(-40, 1)
-        # print(f"angle {new_angle} distance {new_distance}")
-        # self.multiprocess_prediction_queue.put((new_angle, new_distance))
-        # self.current_frame += 1
+        time.sleep(1)
+        if self.current_frame % 2 ==0:
+            new_angle, new_distance = self.renderer.calc_new_angle_and_size(40, 1)
+        else:
+            new_angle, new_distance = self.renderer.calc_new_angle_and_size(-40, 1)
+        print(f"angle {new_angle} distance {new_distance}")
+        self.multiprocess_prediction_queue.put((new_angle, new_distance))
+        self.current_frame += 1
 
 
         # self.current_frame += 1
