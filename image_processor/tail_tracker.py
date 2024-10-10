@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 import logging
-from utils import machine_vision
-from utils import Colors
+from utils_closed_loop import machine_vision
+from utils_closed_loop import Colors
 import networkx
 
 

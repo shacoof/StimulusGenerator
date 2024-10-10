@@ -5,15 +5,16 @@ from renderer.Renderer import Renderer
 import numpy as np
 import os
 import time
+import multiprocessing
+
 
 class ClosedLoop:
-    def __init__(self,pca_and_predict, image_processor, tail_tracker, bout_recognizer, multiprocess_prediction_queue):
+    def __init__(self,pca_and_predict, image_processor, head_origin, bout_recognizer, multiprocess_prediction_queue, num_workers=10):
         """
         Preforms closed loop
         """
         self.pca_and_predict = pca_and_predict
         self.image_processor = image_processor
-        self.tail_tracker = tail_tracker
         self.bout_recognizer = bout_recognizer
         self.is_bout = False
         self.bout_index = 0
@@ -22,6 +23,17 @@ class ClosedLoop:
         self.renderer = Renderer()
         self.multiprocess_prediction_queue = multiprocess_prediction_queue
         self.time = 0
+        self.bout_frames_queue = multiprocessing.Queue()
+        self.tail_data_queue = multiprocessing.Queue()
+        self.workers = []
+        self.head_origin = head_origin
+        # for _ in range(num_workers):
+        #     frame_processing_worker = multiprocessing.Process(
+        #         target=start_closed_loop_background,
+        #         args=(self.bout_frames_queue, self.tail_data_queue))
+        #     self.workers.append(frame_processing_worker)
+        #
+        # self.closed_loop_process.start()  # Start the process in the background
 
     def process_frame(self, frame):
         # time_now = time.time()

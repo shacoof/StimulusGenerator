@@ -55,7 +55,7 @@ class Calibrator:
                         img_path = os.path.join(images_path, img_filename)
                         self.images_paths.append(img_path)
             else:
-                for i in range(start_frame, end_frame + 1):
+                for i in range(start_frame, end_frame):
                     # Format the image filename based on the numbering pattern
                     img_filename = f"img{str(i).zfill(12)}.jpg"
                     img_path = os.path.join(images_path, img_filename)

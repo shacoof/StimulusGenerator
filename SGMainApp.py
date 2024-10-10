@@ -44,13 +44,14 @@ import constants
 class App:
     sg = ""
 
-    def __init__(self, screen, pca_and_predict, image_processor, tail_tracker, bout_recognizer):
+    def __init__(self, screen, pca_and_predict, image_processor, head_origin, bout_recognizer):
         # Init vars
         self.pca_and_predict = pca_and_predict
         self.image_processor = image_processor
         self.tail_tracker = tail_tracker
         self.bout_recognizer = bout_recognizer
         self.screen = screen
+        self.head_origin = head_origin
         self.state = None
         self.multiprocess_state_is_running = multiprocessing.Value('b', False)  # Initial value is False
         self.stimulus_output_device = None
@@ -319,9 +320,9 @@ class App:
                 self.queue_closed_loop_predication = multiprocessing.Queue()  # communication queue to the worker
                 self.closed_loop_process = multiprocessing.Process(
                     target=start_closed_loop_background,
-                    args=(self.images_queue, self.multiprocess_state_is_running, self.pca_and_predict,self.bout_recognizer,self.tail_tracker,
+                    args=(self.images_queue, self.multiprocess_state_is_running, self.pca_and_predict,self.bout_recognizer,
                           self.image_processor.min_frame, self.image_processor.mean_frame,
-                          self.image_processor.head_origin, self.queue_closed_loop_predication))
+                          self.head_origin, self.queue_closed_loop_predication))
 
                 self.closed_loop_process.start()  # Start the process in the background
                 self.sg = StimuliGeneratorClosedLoop(self.canvas, self, self.queue_closed_loop_predication,self.stimulus_output_device, self.queue_reader)
@@ -554,13 +555,15 @@ if __name__ == '__main__':
     tail_tracker = None
     bout_recognizer = None
     if closed_loop.lower() == "on":
-        calibrator = Calibrator(calculate_PCA=True, live_camera=True,
-                                num_frames=number_of_frames_calibration, plot_bout_detector=debug_bout_detector)
-        [pca_and_predict, image_processor, tail_tracker,bout_recognizer] = calibrator.start_calibrating()
+        calibrator = Calibrator(calculate_PCA=False, live_camera=True,
+                                plot_bout_detector=debug_bout_detector,
+                                end_frame=number_of_frames_calibration,
+                                debug_PCA=debug_PCA)
+        [pca_and_predict, image_processor, bout_recognizer, head_origin] = calibrator.start_calibrating()
 
     root = Tk()
     root.title("Shacoof fish Stimuli Generator ")
     utils.dark_title_bar(root)
-    app = App(root,pca_and_predict, image_processor, tail_tracker, bout_recognizer)
+    app = App(root,pca_and_predict, image_processor, head_origin, bout_recognizer)
     root.mainloop()
     sys.exit()

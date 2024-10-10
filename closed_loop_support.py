@@ -1,4 +1,6 @@
 import logging
+
+from closed_loop_config import number_of_frames_calibration
 from image_processor.ImageProcessor import ImageProcessor
 from main_closed_loop import ClosedLoop
 from Stimulus import Stimulus
@@ -72,13 +74,13 @@ class StimuliGeneratorClosedLoop:
         self.stimulus_struct["endShapeRadius"] = str(distance)
 
 
-def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer,tail_tracker,min_frame,
+def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer, min_frame,
                                  mean_frame, head_origin, queue_predictions):
     # Target function for real-time image processing
     logging.info("Closed loop started")
     image_processor = ImageProcessor(False)
-    image_processor.calc_masks(min_frame, mean_frame, head_origin)
-    closed_loop_class = ClosedLoop(pca_and_predict, image_processor, tail_tracker, bout_recognizer,queue_predictions)
+    image_processor.calc_masks(min_frame, mean_frame, head_origin, number_of_frames_calibration)
+    closed_loop_class = ClosedLoop(pca_and_predict, image_processor, head_origin, bout_recognizer,queue_predictions)
     while state.value == 1:
         if not queue_writer.empty():
             i, image_result = queue_writer.get(timeout=1)  # Fetch from the queue
