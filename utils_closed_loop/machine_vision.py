@@ -2,7 +2,7 @@ import itertools
 import numpy as np
 import cv2
 
-from classic_cv_trackers import Colors as Colors
+from utils_closed_loop import Colors as Colors
 
 GRAYSCALE_WHITE = 255
 POINT_POLYGON_VALUES = {

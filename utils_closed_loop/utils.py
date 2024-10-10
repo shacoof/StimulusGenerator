@@ -1,5 +1,6 @@
 import math
 import numpy as np
+
 def get_angle_to_horizontal(p_from, p_to):
     """Get two points, and calculate (rounded) angle in degrees relative to horizontal (x axis),
     counter-clockwise

@@ -1,9 +1,8 @@
-from utils.machine_vision import load_image
 from preprocess_config import *
 from PCA_and_predict.PCA import PCA
 from calibration.point_selector import PointSelector
 from image_processor.ImageProcessor import ImageProcessor
-from image_processor.tail_tracker import TailTracker
+from image_processor.tail_tracker import *
 from recognize_bout_start.RecognizeBout import RecognizeBout
 from camera.Flir_camera import SpinnakerCamera
 
@@ -11,7 +10,6 @@ import numpy as np
 import os
 from tqdm import tqdm
 import scipy.io
-import matplotlib.pyplot as plt
 
 
 
@@ -19,7 +17,7 @@ class Calibrator:
     def __init__(self, calculate_PCA = False, live_camera = True, images_path = None,
                  plot_bout_detector = False, start_frame = 0, end_frame = 1000, calib_frame_ranges = None, debug_PCA = False):
         """
-        Calcultes returns calibrated image processor, PCA predictor, tail tracker
+        Calcultes returns calibrated image processor, PCA predictor, and bout detector
         :param calculate_PCA: boolean value, calculate PCs on fixed fish or use previously calculated projection matrix
         :param live_camera: boolean value, input data for calibration is from live camera or camera frames
         :param num_frames: number of frames to use for calibration
@@ -43,7 +41,6 @@ class Calibrator:
         if live_camera:
             self.camera = SpinnakerCamera()
         self.image_processor = ImageProcessor(live_camera, self.camera)
-        self.tail_tracker = None
         self.plot_bout_detector = plot_bout_detector
 
         if live_camera == False and images_path is None:
@@ -68,7 +65,6 @@ class Calibrator:
         self.first_image = self.load_image()
         self.current_frame = 0
         self.get_area_of_interest()
-        self.tail_tracker = TailTracker(self.head_origin, self.head_dest)
         self.start_frame = start_frame
         self.end_frame = end_frame
 
@@ -125,7 +121,7 @@ class Calibrator:
             pca_and_predict = PCA(prediction_matrix_angle=B_angle, prediction_matrix_distance=B_distance, V=V, S=S)
         self.pca_and_predict = pca_and_predict
         self.bout_recognizer = self._init_bout_recognizer()
-        return self.pca_and_predict, self.image_processor, self.tail_tracker, self.bout_recognizer
+        return self.pca_and_predict, self.image_processor, self.bout_recognizer, self.head_origin
 
 
     def _calc_mean_min_frame(self):
@@ -151,8 +147,7 @@ class Calibrator:
             img_arr = self.load_image()
             if self.calculate_PCA:
                 binary_image = self.image_processor.preprocess_binary()
-                self.tail_tracker.load_binary_image(binary_image)
-                tail_points = self.tail_tracker.get_tail_points(i)
+                tail_points = standalone_tail_tracking_func(binary_image,self.head_origin,0,False)
                 tail_data[i, :, :] = tail_points
         return tail_data
 
