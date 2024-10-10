@@ -23,12 +23,12 @@ class ImageProcessor:
         self.tail_mask_x = None
         self.tail_mask_y = None
         self.kernel = None
-        self.head_origin = None
         self.is_live_camera = is_live_camera
+        self.number_of_frames_used_in_calib = None
+
         if is_live_camera and camera is None:
             raise RuntimeError("need to supply camera")
         self.camera = camera
-
 
 
     def load_image(self, image_path=""):
@@ -46,8 +46,6 @@ class ImageProcessor:
             except Exception as e:
                 print(f"Error loading image: {e}")
 
-    def load_mat(self, mat):
-        self.image_matrix = mat
 
     def get_image_matrix(self):
         """
@@ -79,7 +77,7 @@ class ImageProcessor:
         else:
             print("Image not loaded yet. Please load an image first.")
 
-    def calc_masks(self, min_frame, mean_frame, head_origin):
+    def calc_masks(self, min_frame, mean_frame, head_origin, number_of_frames_used_in_calib):
         # calc in advance - min_frame, focal_lim_x, focal_lim_y, tail_mask_y, tail_mask_x, kernel
         focal_lim_x = [head_origin[0] - FOCAL_LIM_X_MINUS, head_origin[0] + FOCAL_LIM_X_PLUS]
         focal_lim_y = [head_origin[1] - FOCAL_LIM_Y_MINUS, head_origin[1] + FOCAL_LIM_Y_PLUS]
@@ -93,7 +91,6 @@ class ImageProcessor:
         head_mask = min_frame[head_mask_y[0]:head_mask_y[1], head_mask_x[0]:head_mask_x[1]]
         head_mask[head_mask > HEAD_MASK_THRESHOLD] = 0
         min_frame[head_mask_y[0]:head_mask_y[1], head_mask_x[0]:head_mask_x[1]] = head_mask
-        self.head_origin = head_origin
         self.min_frame = min_frame
         self.focal_lim_x = focal_lim_x
         self.focal_lim_y = focal_lim_y
@@ -101,12 +98,14 @@ class ImageProcessor:
         self.tail_mask_y = tail_mask_y
         self.kernel = kernel
         self.mean_frame = mean_frame
+        self.number_of_frames_used_in_calib = number_of_frames_used_in_calib
 
     def preprocess_binary(self):
         if self.image_matrix is None or self.min_frame is None:
             print("Please load an image first and run calc masks")
             return None
         img_arr = self.image_matrix
+        self.update_min_mean_frame(img_arr)
         tail_mask_x = self.tail_mask_x
         tail_mask_y = self.tail_mask_y
         focal_lim_x = self.focal_lim_x
@@ -129,13 +128,21 @@ class ImageProcessor:
 
     def get_tail_mask_x(self):
         if self.tail_mask_x is None:
-            raise RuntimeError(f"need run run calc masks first")
+            raise RuntimeError(f"need to run calc masks first")
         return self.tail_mask_x
 
     def get_tail_mask_y(self):
         if self.tail_mask_y is None:
             raise RuntimeError(f"need run run calc masks first")
         return self.tail_mask_y
+
+    def update_min_mean_frame(self, img_arr):
+        self.min_frame = np.minimum(self.min_frame, img_arr[self.focal_lim_y[0]:self.focal_lim_y[1],
+                                              self.focal_lim_x[0]:self.focal_lim_x[1]])
+        sum_of_frames = self.mean_frame * self.number_of_frames_used_in_calib
+        sum_of_frames = np.add(sum_of_frames, img_arr)
+        self.number_of_frames_used_in_calib += 1
+        self.mean_frame = sum_of_frames/self.number_of_frames_used_in_calib
 
 
 

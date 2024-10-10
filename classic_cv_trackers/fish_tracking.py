@@ -15,9 +15,9 @@ from tqdm import tqdm
 from classic_cv_trackers.abstract_and_common_trackers import ClassicCvAbstractTrackingAPI
 from classic_cv_trackers import Colors
 from classic_cv_trackers.common_tracking_features import EllipseData, absolute_angles_and_differences_in_deg
-from utils_closed_loop.utils import get_angle_to_horizontal
-from utils_closed_loop.noise_cleaning import clean_plate
-from utils_closed_loop import machine_vision, numerical_analysis, svd_analyzer
+from utils.utils import get_angle_to_horizontal
+from utils.noise_cleaning import clean_plate
+from utils import machine_vision, numerical_analysis, svd_analyzer
 
 
 class FrameAnalysisData:  # todo make common fish output? after tail merge
@@ -1169,27 +1169,29 @@ class ContourBasedTracking(ClassicCvAbstractTrackingAPI):
         if fish_midline_clean is None:
             return None
 
-        # Get nonzero points (y, x)
         y = fish_midline_clean.nonzero()[0]
         x = fish_midline_clean.nonzero()[1]
+        nonzero_midline_points = np.stack([x, y], axis=1)
 
-        # Ensure that the points are sorted based on y-coordinates
-        sorted_indices = np.argsort(y)
-        x = x[sorted_indices]
-        y = y[sorted_indices]
+        height = fish_midline_clean.shape[0]
+        width = fish_midline_clean.shape[1]
+        midline_graph = cls.create_graph_from_points(midline_points=nonzero_midline_points, height=height,
+                                                     width=width, )
 
-        # Perform 2D polynomial fit (fitting x as a function of y)
-        poly_coeff = np.polyfit(y, x, 6)  # Fit polynomial to the x(y)
-        poly_func = np.poly1d(poly_coeff)  # Create a polynomial function from the coefficients
+        connected_components_subgraph = [
+            midline_graph.subgraph(component).copy() for component in networkx.connected_components(midline_graph)
+        ]
+        biggest_subgraph = max(connected_components_subgraph, key=len)
+        periphery = networkx.periphery(biggest_subgraph)
 
-        # Use the polynomial function to generate smoothed x values
-        smoothed_x = poly_func(y)
+        periphery_paths = []
+        for point in periphery:
+            # points that are diagonals to one another weight less
+            periphery_paths += [networkx.shortest_path(midline_graph, point, other_point, weight='weight') for
+                                other_point in periphery]
 
-        # Stack smoothed x and original y values to get the smoothed midline path
-        smoothed_midline_path = np.stack([smoothed_x, y], axis=1)
-
-        # Optional: Align the smoothed midline path to clean up any discrepancies
-        midline_path = cls.align_midline_path(cleaned_fish, smoothed_midline_path, output, friend_fish)
+        midline_path = max(periphery_paths, key=len)
+        midline_path = cls.align_midline_path(cleaned_fish, midline_path, output, friend_fish)
 
         return midline_path
 
