@@ -40,6 +40,7 @@ class Calibrator:
 
         if live_camera:
             self.camera = SpinnakerCamera()
+            self.num_frames = end_frame - start_frame
         self.image_processor = ImageProcessor(live_camera, self.camera)
         self.plot_bout_detector = plot_bout_detector
 
@@ -60,8 +61,7 @@ class Calibrator:
                     img_filename = f"img{str(i).zfill(12)}.jpg"
                     img_path = os.path.join(images_path, img_filename)
                     self.images_paths.append(img_path)
-
-        self.num_frames = len(self.images_paths)
+            self.num_frames = len(self.images_paths)
         self.first_image = self.load_image()
         self.current_frame = 0
         self.get_area_of_interest()
