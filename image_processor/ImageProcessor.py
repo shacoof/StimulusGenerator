@@ -100,6 +100,9 @@ class ImageProcessor:
         self.mean_frame = mean_frame
         self.number_of_frames_used_in_calib = number_of_frames_used_in_calib
 
+    def load_mat(self, mat):
+        self.image_matrix = mat
+
     def preprocess_binary(self):
         if self.image_matrix is None or self.min_frame is None:
             print("Please load an image first and run calc masks")

@@ -317,15 +317,15 @@ class App:
 
             if self.closed_loop.lower() == "on":
                 # Start the closed-loop process
-                self.queue_closed_loop_predication = multiprocessing.Queue()  # communication queue to the worker
+                self.queue_closed_loop_prediction = multiprocessing.Queue()  # communication queue to the worker
                 self.closed_loop_process = multiprocessing.Process(
                     target=start_closed_loop_background,
                     args=(self.images_queue, self.multiprocess_state_is_running, self.pca_and_predict,self.bout_recognizer,
                           self.image_processor.min_frame, self.image_processor.mean_frame,
-                          self.head_origin, self.queue_closed_loop_predication))
+                          self.head_origin, self.queue_closed_loop_prediction))
 
                 self.closed_loop_process.start()  # Start the process in the background
-                self.sg = StimuliGeneratorClosedLoop(self.canvas, self, self.queue_closed_loop_predication,self.stimulus_output_device, self.queue_reader)
+                self.sg = StimuliGeneratorClosedLoop(self.canvas, self, self.queue_closed_loop_prediction, self.stimulus_output_device, self.queue_reader)
                 self.runStimuliClosedLoop()
             else:
                 self.sg = StimulusGenerator(self.canvas, self, self.stimulus_output_device, self.queue_reader)

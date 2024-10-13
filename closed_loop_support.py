@@ -88,6 +88,6 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
         else:
             pass
             #logging.warning("Queue is empty, no image to process.")
-
+    closed_loop_class.process_frame(None)
     # Clean-up logic for closed-loop background when state is not RUN
     logging.info("Closed loop background finished")

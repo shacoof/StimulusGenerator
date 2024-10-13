@@ -122,7 +122,7 @@ class PCA:
         # reshaped_distance = reduced_dim[9:32].T.reshape(1, 69)
         # new_distance = np.concatenate((self.prediction_matrix_distance[3:26], self.prediction_matrix_distance[29:52], self.prediction_matrix_distance[55:78]))
         # distance = np.square(reshaped_distance) @ new_distance
-        return angle, distance
+        return angle[0][0], distance[0][0]
 
     @staticmethod
     def clean_nan_from_data(data, remove_nan=False):

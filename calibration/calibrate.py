@@ -15,9 +15,10 @@ import scipy.io
 
 class Calibrator:
     def __init__(self, calculate_PCA = False, live_camera = True, images_path = None,
-                 plot_bout_detector = False, start_frame = 0, end_frame = 1000, calib_frame_ranges = None, debug_PCA = False):
+                 plot_bout_detector = False, start_frame = 0, end_frame = 1000, calib_frame_ranges = None,
+                 debug_PCA = False):
         """
-        Calcultes returns calibrated image processor, PCA predictor, and bout detector
+        Calculates returns calibrated image processor, PCA predictor, and bout detector
         :param calculate_PCA: boolean value, calculate PCs on fixed fish or use previously calculated projection matrix
         :param live_camera: boolean value, input data for calibration is from live camera or camera frames
         :param num_frames: number of frames to use for calibration
