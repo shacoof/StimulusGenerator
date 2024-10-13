@@ -30,6 +30,7 @@ def analyse_tail_only(input, cleaned, frame_number, min_fish_size=200):
     output = {}
     output['is_ok'] = False
     output['fish_contour'] = None
+    output['tail_data'] = None
     an_frame = input  # output frame
 
     _, mask = cv2.threshold(cv2.cvtColor(cleaned, cv2.COLOR_BGR2GRAY), 70, 255, cv2.THRESH_BINARY)  # 95

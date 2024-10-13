@@ -1,4 +1,4 @@
-name: opencv_contrib_for_behavior
+name: closed_loop
 channels:
   - defaults
 dependencies:
@@ -15,6 +15,8 @@ dependencies:
   - xz=5.2.5
   - zlib=1.2.11
   - pip:
+    - screeninfo==0.8.1
+    - nidaqmx==0.8.0
     - cycler==0.10.0
     - decorator==4.4.2
     - et-xmlfile==1.0.1

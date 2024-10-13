@@ -1,36 +1,22 @@
-import time
-from tkinter import Canvas, Tk, BOTH
-from tkinter import ttk
 from tkinter.ttk import tkinter
-from screeninfo import get_monitors
 from closed_loop_support import StimuliGeneratorClosedLoop, start_closed_loop_background
-import nidaqmx
 import time
-import sys
 import shutil
 import datetime
-import logging
-import multiprocessing
-from math import pi, cos
 from tkinter import Canvas, Tk, BOTH
 from tkinter import ttk
-from tkinter.ttk import tkinter
 import nidaqmx
 from screeninfo import get_monitors
 import utils
 from NiDaqPulse import NiDaqPulse
-from image_processor.ImageProcessor import ImageProcessor
-from utils import writeCSV
 from math import pi, cos
 import sys
 from StimuliGenerator import *
-import constants
 import multiprocessing
-from utils import writeCSV, opencv_create_video
+from utils import writeCSV
 from StimuliGenerator import StimulusGenerator
 from closed_loop_config import *
 from calibration.calibrate import Calibrator
-from image_processor.ImageProcessor import ImageProcessor
 import image_reader_worker
 import image_writer_worker
 import constants
