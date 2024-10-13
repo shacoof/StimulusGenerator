@@ -17,14 +17,17 @@ def worker_target(bout_frames_queue, tail_data_queue, head_origin):
         if tuple_val is None:
             # Terminate worker on receiving None
             break
+        start_time = time.time()
         idx, binary_image = tuple_val[0], tuple_val[1]
         tail_data = standalone_tail_tracking_func(binary_image, head_origin, 0, False)
         tail_data_queue.put((idx,tail_data))
+        end_time = time.time()
+        #print(f"tail analysis time {end_time - start_time}")
 
 
 class ClosedLoop:
     def __init__(self,pca_and_predict, image_processor, head_origin, bout_recognizer, multiprocess_prediction_queue,
-                 num_workers=2, num_bout_frames = 35):
+                 num_workers=3, num_bout_frames = 35):
         """
         Preforms closed loop
         """
@@ -59,7 +62,7 @@ class ClosedLoop:
         """Stops all worker processes by sending 'None' to the input queue."""
         for _ in range(self.num_workers):
             self.bout_frames_queue.put(None)
-        for p in self.processes:
+        for p in self.workers:
             p.join()
 
     def end_of_bout(self):
@@ -74,7 +77,6 @@ class ClosedLoop:
                 bout_index, tail_data = self.tail_data_queue.get()
                 bout_frames[bout_index - 1, :, :] = tail_data  # Place the result in the correct position based on the index
                 processed_count += 1
-                print(f"Processed frame {processed_count}")
         return bout_frames
 
 
@@ -111,16 +113,18 @@ class ClosedLoop:
             if self.bout_index == frames_from_bout:
                 self.is_bout = False
                 self.bout_index = 0
+                cur_time = time.time()
+                print(f"time from start {cur_time - self.bout_start_time}")
                 bout_frames = self.end_of_bout()
                 angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(bout_frames, to_plot=debug_PCA)
                 new_angle, new_distance = self.renderer.calc_new_angle_and_size(angle, distance)
                 self.multiprocess_prediction_queue.put((new_angle, new_distance))
                 bout_end_time = time.time()
                 print(f"time to process bout {bout_end_time - self.bout_start_time}")
-                print(
-                    f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
-                print(
-                    f"frame {self.current_frame} new angle {new_angle}, new size {new_distance}")
+                # print(
+                #     f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
+                # print(
+                #     f"frame {self.current_frame} new angle {new_angle}, new size {new_distance}")
         else:
             verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
             if verdict:
@@ -161,6 +165,12 @@ if __name__ == '__main__':
 
 
     for i in range(len(all_frame_mats)):
+        # here
+        start_time = time.time()
         closed_loop_class.process_frame(all_frame_mats[i])
+        end_time = time.time()
         time.sleep(0.002)
+
+        #print(f"time to process frame {end_time-start_time}")
+    closed_loop_class.process_frame(None)
 
