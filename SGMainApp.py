@@ -1,4 +1,5 @@
 from tkinter.ttk import tkinter
+import threading
 from closed_loop_support import StimuliGeneratorClosedLoop, start_closed_loop_background
 import time
 import shutil
@@ -30,15 +31,16 @@ import constants
 class App:
     sg = ""
 
-    def __init__(self, screen, pca_and_predict, image_processor, head_origin, bout_recognizer):
+    def __init__(self, screen, calibrator):
         # Init vars
-        self.pca_and_predict = pca_and_predict
-        self.image_processor = image_processor
-        self.tail_tracker = tail_tracker
-        self.bout_recognizer = bout_recognizer
+        self.pca_and_predict = None
+        self.image_processor = None
+        self.bout_recognizer = None
+        self.head_origin = None
+        self.calibrator = calibrator
         self.screen = screen
-        self.head_origin = head_origin
         self.state = None
+        self.calibration_complete_event = threading.Event()
         self.multiprocess_state_is_running = multiprocessing.Value('b', False)  # Initial value is False
         self.stimulus_output_device = None
         self.port = 1
@@ -116,6 +118,26 @@ class App:
         self.screen.bind(constants.MID_SCREEN, self.showMidScreen)
         self.screen.bind('?', self.printHelp)
         self.printHelp("")
+
+    def calibrate(self):
+        import queue
+        stimuli_queue = queue.Queue()
+        calibrating_thread = threading.Thread(target=self.start_calibrating,args=(stimuli_queue,), daemon=True)
+        calibrating_thread.start()
+        self.sg = StimuliGeneratorClosedLoop(self.canvas, self, stimuli_queue,
+                                             self.stimulus_output_device, self.queue_reader)
+        self.runStimuliClosedLoop()
+        while self.state == constants.RUN:
+            self.canvas.update()  # This keeps the UI responsive during the loop
+            time.sleep(0.01)  # Small sleep to avoid busy-waiting and CPU overload
+        self.sg.stop_stimulus()
+
+    def start_calibrating(self, stimuli_queue):
+        # Calibration process running in its own thread
+        [self.pca_and_predict, self.image_processor, self.bout_recognizer,
+        self.head_origin] = self.calibrator.start_calibrating(stimuli_queue)
+        self.state = constants.PAUSE
+
 
     def init_f9_communication(self):
         if self.f9CommunicationEnabled.lower() == "on":
@@ -272,6 +294,7 @@ class App:
         return
 
     def manageStimulus(self, event):
+        print("#### manage stimulus ####")
         logging.debug(event)
         if event.keysym == constants.PAUSE:
             self.state = constants.PAUSE
@@ -293,6 +316,9 @@ class App:
                 self.closed_loop_process.terminate()  # Terminate the closed-loop process
 
         elif event.keysym == constants.RUN:
+            if self.closed_loop.lower() == "on":
+                self.state = constants.RUN
+                self.calibrate()
             self.run_start_time = time.time()
             self.state = constants.RUN
             self.multiprocess_state_is_running.value = True
@@ -536,25 +562,20 @@ class App:
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
     appConfig = loadCSV(constants.APP_CONFIG_FILE)
-
     closed_loop = appConfig[0]["use_closed_loop"]
     camera_control = appConfig[0]["cameraControl"]
     if closed_loop.lower() == "on" and camera_control.lower() != "on":
-        self.leaveProg("can't run closed loop without camera")
-    pca_and_predict = None
-    image_processor = None
-    tail_tracker = None
-    bout_recognizer = None
+        raise RuntimeError("can't run closed loop without camera - edit the appConfig file")
+    calibrator = None
     if closed_loop.lower() == "on":
         calibrator = Calibrator(calculate_PCA=False, live_camera=True,
                                 plot_bout_detector=debug_bout_detector,
                                 end_frame=number_of_frames_calibration,
                                 debug_PCA=debug_PCA)
-        [pca_and_predict, image_processor, bout_recognizer, head_origin] = calibrator.start_calibrating()
 
     root = Tk()
     root.title("Shacoof fish Stimuli Generator ")
     utils.dark_title_bar(root)
-    app = App(root,pca_and_predict, image_processor, head_origin, bout_recognizer)
+    app = App(root,calibrator)
     root.mainloop()
     sys.exit()

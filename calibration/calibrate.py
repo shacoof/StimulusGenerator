@@ -94,8 +94,8 @@ class Calibrator:
         return self.image_processor.get_image_matrix()
 
 
-    def start_calibrating(self):
-        self._calc_mean_min_frame()
+    def start_calibrating(self, stimuli_queue = None):
+        self._calc_mean_min_frame(stimuli_queue)
         # Shai
         B_angle = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['angle_solution']
         B_distance = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['distance_solution']
@@ -125,16 +125,23 @@ class Calibrator:
         return self.pca_and_predict, self.image_processor, self.bout_recognizer, self.head_origin
 
 
-    def _calc_mean_min_frame(self):
+    def _calc_mean_min_frame(self,stimuli_queue):
         first_img_arr = self.first_image
         current_min = first_img_arr[self.focal_lim_y[0]:self.focal_lim_y[1], self.focal_lim_x[0]:self.focal_lim_x[1]]
         current_sum = first_img_arr
-        for _ in tqdm(range(self.num_frames)):
+        start_angle_of_stimuli = 15
+        end_angle_of_stimuli = 165
+        is_start = True
+        for i in tqdm(range(self.num_frames)):
+            if i % 100 == 0:
+                if stimuli_queue:
+                    angle = start_angle_of_stimuli if is_start else end_angle_of_stimuli
+                    stimuli_queue.put((angle, 4))
+                    is_start = not is_start
             img_arr = self.load_image()
             current_min = np.minimum(current_min, img_arr[self.focal_lim_y[0]:self.focal_lim_y[1],
                                                   self.focal_lim_x[0]:self.focal_lim_x[1]])
             current_sum = np.add(current_sum, img_arr, dtype=np.uint32)
-
         self.min_frame = current_min
         self.mean_frame = current_sum / self.num_frames
         self.image_processor.calc_masks(self.min_frame,self.mean_frame,self.head_origin,
