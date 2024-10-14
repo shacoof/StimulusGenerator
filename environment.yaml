@@ -52,3 +52,5 @@ dependencies:
     - moviepy==1.0.3
     - xmltodict==0.13.0
     - pyvista==0.38.6
+    - spinnaker_python-2.6.0.156-cp37-cp37m-win_amd64.whl
+

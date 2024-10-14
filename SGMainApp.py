@@ -302,6 +302,11 @@ class App:
                 self.writer_process2.start()
 
             if self.closed_loop.lower() == "on":
+                # save preprocess_config.py
+                with open("preprocess_config.py", 'r') as source_file:
+                    content = source_file.read()
+                with open(self.data_path + "/preprocess_config.txt", 'w') as target_file:
+                    target_file.write(content)
                 # Start the closed-loop process
                 self.queue_closed_loop_prediction = multiprocessing.Queue()  # communication queue to the worker
                 self.closed_loop_process = multiprocessing.Process(

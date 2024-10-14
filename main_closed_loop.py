@@ -84,56 +84,54 @@ class ClosedLoop:
         # time_now = time.time()
         # print(f"time {time_now - self.bout_start_time}")
         # self.bout_start_time = time_now
-        #
-        # time.sleep(1)
-        # if self.current_frame % 2 ==0:
-        #     new_angle, new_distance = self.renderer.calc_new_angle_and_size(40, 1)
-        # else:
-        #     new_angle, new_distance = self.renderer.calc_new_angle_and_size(-40, 1)
-        # print(f"angle {new_angle} distance {new_distance}")
-        # self.multiprocess_prediction_queue.put((new_angle, new_distance))
-        # self.current_frame += 1
 
-        # program stop
-        if frame is None:
-            self.stop_workers()
-            return
-
-        self.current_frame += 1
-        self.image_processor.load_mat(frame)
-        self.bout_recognizer.update(self.image_processor.get_image_matrix())
-        # if this is a bout frame
-        if self.is_bout:
-            self.bout_index += 1
-            binary_image = self.image_processor.preprocess_binary()
-            # Put in multiprocess queue
-            self.bout_frames_queue.put((self.bout_index,binary_image))
-
-            #last bout frame
-            if self.bout_index == frames_from_bout:
-                self.is_bout = False
-                self.bout_index = 0
-                cur_time = time.time()
-                print(f"time from start {cur_time - self.bout_start_time}")
-                bout_frames = self.end_of_bout()
-                angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(bout_frames, to_plot=debug_PCA)
-                new_angle, new_distance = self.renderer.calc_new_angle_and_size(angle, distance)
-                self.multiprocess_prediction_queue.put((new_angle, new_distance))
-                bout_end_time = time.time()
-                print(f"time to process bout {bout_end_time - self.bout_start_time}")
-                # print(
-                #     f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
-                # print(
-                #     f"frame {self.current_frame} new angle {new_angle}, new size {new_distance}")
+        time.sleep(1)
+        if self.current_frame % 2 ==0:
+            new_angle, new_distance = self.renderer.calc_new_angle_and_size(100, 1)
         else:
-            verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
-            if verdict:
-                self.bout_start_time = time.time()
-                self.is_bout = True
-                self.bout_index += 1
-                binary_image = self.image_processor.preprocess_binary()
-                # Put in multiprocess queue
-                self.bout_frames_queue.put((self.bout_index,binary_image))
+            new_angle, new_distance = self.renderer.calc_new_angle_and_size(-100, 1)
+        print(f"angle {new_angle} distance {new_distance}")
+        self.multiprocess_prediction_queue.put((new_angle, new_distance))
+        self.current_frame += 1
+
+        # # program stop
+        # if frame is None:
+        #     self.stop_workers()
+        #     return
+        #
+        # self.current_frame += 1
+        # self.image_processor.load_mat(frame)
+        # self.bout_recognizer.update(self.image_processor.get_image_matrix())
+        # # if this is a bout frame
+        # if self.is_bout:
+        #     self.bout_index += 1
+        #     binary_image = self.image_processor.preprocess_binary()
+        #     # Put in multiprocess queue
+        #     self.bout_frames_queue.put((self.bout_index,binary_image))
+        #
+        #     #last bout frame
+        #     if self.bout_index == frames_from_bout:
+        #         self.is_bout = False
+        #         self.bout_index = 0
+        #         bout_frames = self.end_of_bout()
+        #         angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(bout_frames, to_plot=debug_PCA)
+        #         new_angle, new_distance = self.renderer.calc_new_angle_and_size(angle, distance)
+        #         self.multiprocess_prediction_queue.put((new_angle, new_distance))
+        #         bout_end_time = time.time()
+        #         print(f"time to process bout {bout_end_time - self.bout_start_time}")
+        #         print(
+        #             f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
+        #         print(
+        #             f"frame {self.current_frame} new angle {new_angle}, new size {new_distance}")
+        # else:
+        #     verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
+        #     if verdict:
+        #         self.bout_start_time = time.time()
+        #         self.is_bout = True
+        #         self.bout_index += 1
+        #         binary_image = self.image_processor.preprocess_binary()
+        #         # Put in multiprocess queue
+        #         self.bout_frames_queue.put((self.bout_index,binary_image))
 
 
 if __name__ == '__main__':

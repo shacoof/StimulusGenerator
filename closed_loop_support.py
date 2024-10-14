@@ -19,11 +19,11 @@ class StimuliGeneratorClosedLoop:
             "slowSpeed": '0',
             "startShapeRadius": '4',
             "endShapeRadius": '4',
-            "fastDuration": '500',
-            "slowDuration": '500',
+            "fastDuration": '100',
+            "slowDuration": '100',
             "startMode": "AFTER",
             "delay": '0',
-            "duration": '500',  # ms
+            "duration": '100',  # ms
             "xType": "degrees"
         }
         self.camera_queue = camera_queue
