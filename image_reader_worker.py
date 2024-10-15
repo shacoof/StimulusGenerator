@@ -31,6 +31,8 @@ import time
 import datetime
 import utils
 from NiDaqPulse import NiDaqPulse
+from closed_loop_config import camera_frame_rate, camera_frame_width_in_pixels, camera_frame_height_in_pixels, \
+    camera_frame_offsetX_in_pixels, camera_frame_offsetY_in_pixels
 
 # this array of arrays is used to create a log of which frame was captured at the time of stimulus event
 # see NUM_IMAGES
@@ -227,6 +229,62 @@ def print_device_info(nodemap):
     return result
 
 
+def set_camera_parameters(nodemap):
+    """
+    This function sets the frame rate, width, height, and offset for the camera.
+    :param nodemap: The camera's nodemap to configure settings.
+    :type nodemap: INodeMap
+    :return: True if successful, False otherwise.
+    :rtype: bool
+    """
+    try:
+        # Set image width
+        node_width = PySpin.CIntegerPtr(nodemap.GetNode('Width'))
+        if PySpin.IsAvailable(node_width) and PySpin.IsWritable(node_width):
+            width = camera_frame_width_in_pixels
+            node_width.SetValue(width)
+            print(f"Width set to: {width} px")
+
+        # Set image height
+        node_height = PySpin.CIntegerPtr(nodemap.GetNode('Height'))
+        if PySpin.IsAvailable(node_height) and PySpin.IsWritable(node_height):
+            height = camera_frame_height_in_pixels
+            node_height.SetValue(height)
+            print(f"Height set to: {height} px")
+
+        # Set offset X
+        node_offset_x = PySpin.CIntegerPtr(nodemap.GetNode('OffsetX'))
+        if PySpin.IsAvailable(node_offset_x) and PySpin.IsWritable(node_offset_x):
+            offset_x = camera_frame_offsetX_in_pixels
+            node_offset_x.SetValue(offset_x)
+            print(f"Offset X set to: {offset_x} px")
+
+        # Set offset Y
+        node_offset_y = PySpin.CIntegerPtr(nodemap.GetNode('OffsetY'))
+        if PySpin.IsAvailable(node_offset_y) and PySpin.IsWritable(node_offset_y):
+            offset_y = camera_frame_offsetY_in_pixels
+            node_offset_y.SetValue(offset_y)
+            print(f"Offset Y set to: {offset_y} px")
+
+        # Disable frame rate auto
+        node_frame_rate_auto = PySpin.CEnumerationPtr(nodemap.GetNode('AcquisitionFrameRateAuto'))
+        if PySpin.IsAvailable(node_frame_rate_auto) and PySpin.IsWritable(node_frame_rate_auto):
+            node_frame_rate_auto_off = node_frame_rate_auto.GetEntryByName('Off')
+            if PySpin.IsAvailable(node_frame_rate_auto_off) and PySpin.IsReadable(node_frame_rate_auto_off):
+                node_frame_rate_auto.SetIntValue(node_frame_rate_auto_off.GetValue())
+                print("Frame rate auto set to: Off")
+
+        # Set the frame rate
+        node_acquisition_framerate = PySpin.CFloatPtr(nodemap.GetNode('AcquisitionFrameRate'))
+        if PySpin.IsAvailable(node_acquisition_framerate) and PySpin.IsWritable(node_acquisition_framerate):
+            fr = camera_frame_rate
+            node_acquisition_framerate.SetValue(fr)
+            print(f"Frame rate set to: {fr} fps")
+        return True
+    except PySpin.SpinnakerException as ex:
+        print(f"Error setting camera parameters: {ex}")
+        return False
+
 def acquire_images(cam, nodemap):
     global queue_reader, queue_writer, images_queue
     global file_prefix
@@ -364,6 +422,8 @@ def run_single_camera(cam):
 
         # Retrieve GenICam nodemap
         nodemap = cam.GetNodeMap()
+
+        set_camera_parameters(nodemap)
 
         # Acquire list of images
         err, images = acquire_images(cam, nodemap)

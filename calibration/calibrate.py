@@ -5,7 +5,7 @@ from image_processor.ImageProcessor import ImageProcessor
 from image_processor.tail_tracker import *
 from recognize_bout_start.RecognizeBout import RecognizeBout
 from camera.Flir_camera import SpinnakerCamera
-
+import closed_loop_config
 import numpy as np
 import os
 from tqdm import tqdm
@@ -41,6 +41,9 @@ class Calibrator:
 
         if live_camera:
             self.camera = SpinnakerCamera()
+            self.camera.set_image_dimensions(width=camera_frame_width_in_pixels,height=camera_frame_height_in_pixels,
+                                             offsetX=camera_frame_offsetX_in_pixels,offsetY=camera_frame_offsetY_in_pixels)
+            self.camera.set_camera_settings(frame_rate=camera_frame_rate)
             self.num_frames = end_frame - start_frame
         self.image_processor = ImageProcessor(live_camera, self.camera)
         self.plot_bout_detector = plot_bout_detector

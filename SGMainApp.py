@@ -294,7 +294,6 @@ class App:
         return
 
     def manageStimulus(self, event):
-        print("#### manage stimulus ####")
         logging.debug(event)
         if event.keysym == constants.PAUSE:
             self.state = constants.PAUSE

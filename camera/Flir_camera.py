@@ -13,12 +13,35 @@ class SpinnakerCamera:
         self.camera = self.cam_list[0]  # Use the first camera found
         self.camera.Init()  # Initialize the camera
 
+    def set_image_dimensions(self, width=None, height=None, offsetX=None, offsetY=None):
+        """
+        Set the image dimensions (width and height) in pixels.
+        """
+        # Check for the maximum allowable dimensions
+        max_width = self.camera.Width.GetMax()
+        max_height = self.camera.Height.GetMax()
+
+        if width:
+            if width > max_width:
+                raise ValueError(f"Requested width {width} exceeds maximum width {max_width}.")
+            self.camera.Width.SetValue(width)
+
+        if height:
+            if height > max_height:
+                raise ValueError(f"Requested height {height} exceeds maximum height {max_height}.")
+            self.camera.Height.SetValue(height)
+
+        # Optionally set offsets (if needed)
+        if offsetX:
+            self.camera.OffsetX.SetValue(offsetX)
+        if offsetY:
+            self.camera.OffsetY.SetValue(offsetY)
+
     def set_camera_settings(self, frame_rate=None, exposure_time=None, gain=None):
         """
         Set camera settings such as frame rate, exposure time, and gain.
         """
         if frame_rate:
-            self.camera.AcquisitionFrameRateEnable.SetValue(True)
             self.camera.AcquisitionFrameRate.SetValue(frame_rate)
         if exposure_time:
             self.camera.ExposureAuto.SetValue(PySpin.ExposureAuto_Off)
