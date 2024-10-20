@@ -110,11 +110,16 @@ class PCA:
             self.plot_coefficients(reduced_dim, frame_number)
             for i in range(self.number_of_frames_for_predict):
                 self.visualize_predicted_tail(tail_data_theta_mat[i], i)
-
-        reshaped_angle = reduced_dim[0:30].T.reshape(1, 90)
+        #fr 166
+        reshaped_angle = reduced_dim[0:10,:].T.reshape(1, 30)
         angle = reshaped_angle @ self.prediction_matrix_angle
-        reshaped_distance = reduced_dim[9:35].T.reshape(1, 78)
+        reshaped_distance = reduced_dim[3:12, :].T.reshape(1, 27)
         distance = np.square(reshaped_distance) @ self.prediction_matrix_distance
+        # regular
+        # reshaped_angle = reduced_dim[0:30].T.reshape(1, 90)
+        # angle = reshaped_angle @ self.prediction_matrix_angle
+        # reshaped_distance = reduced_dim[9:35].T.reshape(1, 78)
+        # distance = np.square(reshaped_distance) @ self.prediction_matrix_distance
         # using late frames in the prediction
         # reshaped_angle = reduced_dim[0:27].T.reshape(1, 81)
         # new_angle = np.concatenate((self.prediction_matrix_angle[3:30], self.prediction_matrix_angle[33:60], self.prediction_matrix_angle[63:90]))

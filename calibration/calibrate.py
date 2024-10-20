@@ -1,3 +1,4 @@
+from closed_loop_config import number_of_frames_calibration
 from preprocess_config import *
 from PCA_and_predict.PCA import PCA
 from calibration.point_selector import PointSelector
@@ -5,7 +6,7 @@ from image_processor.ImageProcessor import ImageProcessor
 from image_processor.tail_tracker import *
 from recognize_bout_start.RecognizeBout import RecognizeBout
 from camera.Flir_camera import SpinnakerCamera
-import closed_loop_config
+from closed_loop_config import *
 import numpy as np
 import os
 from tqdm import tqdm
@@ -100,20 +101,21 @@ class Calibrator:
     def start_calibrating(self, stimuli_queue = None):
         self._calc_mean_min_frame(stimuli_queue)
         # Shai
-        B_angle = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['angle_solution']
-        B_distance = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['distance_solution']
+        # B_angle = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['angle_solution']
+        # B_distance = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['distance_solution']
         # Imri 500 Hz
         # B_angle = scipy.io.loadmat('Z:\Lab-Shared\Data\ClosedLoop\B_angle.mat')['angle_solution']
         # B_distance = scipy.io.loadmat('Z:\Lab-Shared\Data\ClosedLoop\B_distance.mat')['distance_solution']
         # Imri 500/3 Hz
-        # B_angle = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")['angle_solution']
-        # B_distance = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")['distance_solution']
+        B_angle = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")['angle_solution']
+        B_distance = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")['distance_solution']
 
 
         pca_and_predict = None
         if self.calculate_PCA:
             tail_data = self._get_tail_points_for_PCA()
-            pca_and_predict = PCA(prediction_matrix_angle=B_angle, prediction_matrix_distance=B_distance, plot_PC=self.debug_PCA)
+            pca_and_predict = PCA(prediction_matrix_angle=B_angle, prediction_matrix_distance=B_distance, plot_PC=self.debug_PCA,
+                                  number_of_frames_for_predict=frames_from_bout)
             pca_and_predict.calc_3_PCA(tail_data)
         else:
             # imris PCs
@@ -122,7 +124,8 @@ class Calibrator:
             # shai's PCs
             # V = scipy.io.loadmat("Z:\\adi.kishony\ClosedLoopPOC\saved_np_arrays\\20240916-f2_SVD.mat")['V']
             # S = scipy.io.loadmat("Z:\\adi.kishony\ClosedLoopPOC\saved_np_arrays\\20240916-f2_SVD.mat")['S']
-            pca_and_predict = PCA(prediction_matrix_angle=B_angle, prediction_matrix_distance=B_distance, V=V, S=S)
+            pca_and_predict = PCA(prediction_matrix_angle=B_angle, prediction_matrix_distance=B_distance, V=V, S=S,
+                                  number_of_frames_for_predict=frames_from_bout)
         self.pca_and_predict = pca_and_predict
         self.bout_recognizer = self._init_bout_recognizer()
         return self.pca_and_predict, self.image_processor, self.bout_recognizer, self.head_origin

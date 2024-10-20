@@ -27,7 +27,7 @@ def worker_target(bout_frames_queue, tail_data_queue, head_origin):
 
 class ClosedLoop:
     def __init__(self,pca_and_predict, image_processor, head_origin, bout_recognizer, multiprocess_prediction_queue,
-                 num_workers=3, num_bout_frames = 35):
+                 num_workers=3, num_bout_frames = 12):
         """
         Preforms closed loop
         """
@@ -162,12 +162,12 @@ if __name__ == '__main__':
             print(f"Error loading image: {e}")
 
 
-    for i in range(len(all_frame_mats)):
+    for i in range(0,len(all_frame_mats),3):
         # here
         start_time = time.time()
         closed_loop_class.process_frame(all_frame_mats[i])
         end_time = time.time()
-        time.sleep(0.002)
+        time.sleep(0.006024)
 
         #print(f"time to process frame {end_time-start_time}")
     closed_loop_class.process_frame(None)
