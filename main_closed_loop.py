@@ -27,7 +27,7 @@ def worker_target(bout_frames_queue, tail_data_queue, head_origin):
 
 class ClosedLoop:
     def __init__(self,pca_and_predict, image_processor, head_origin, bout_recognizer, multiprocess_prediction_queue,
-                 num_workers=3, num_bout_frames = 12):
+                 num_workers=1, num_bout_frames = 12):
         """
         Preforms closed loop
         """
