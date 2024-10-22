@@ -30,6 +30,8 @@ class ImageProcessor:
             raise RuntimeError("need to supply camera")
         self.camera = camera
 
+    def load_mat(self, mat):
+        self.image_matrix = mat
 
     def load_image(self, image_path=""):
         """
@@ -100,9 +102,6 @@ class ImageProcessor:
         self.mean_frame = mean_frame
         self.number_of_frames_used_in_calib = number_of_frames_used_in_calib
 
-    def load_mat(self, mat):
-        self.image_matrix = mat
-
     def preprocess_binary(self):
         if self.image_matrix is None or self.min_frame is None:
             print("Please load an image first and run calc masks")
@@ -127,7 +126,8 @@ class ImageProcessor:
                                 iterations=1)
         binary_img[tail_mask_y[0]:tail_mask_y[1], tail_mask_x[0]:tail_mask_x[1]] = img_erosion
         self.image_matrix = binary_img
-        return binary_img
+
+        return binary_img, subtracted_img
 
     def get_tail_mask_x(self):
         if self.tail_mask_x is None:

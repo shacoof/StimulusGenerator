@@ -4,9 +4,11 @@ from PCA_and_predict.PCA import PCA
 from calibration.point_selector import PointSelector
 from image_processor.ImageProcessor import ImageProcessor
 from image_processor.tail_tracker import *
+from image_processor.stytra_tail_tracking import *
 from recognize_bout_start.RecognizeBout import RecognizeBout
 from camera.Flir_camera import SpinnakerCamera
 from closed_loop_config import *
+
 import numpy as np
 import os
 from tqdm import tqdm
@@ -17,7 +19,7 @@ import scipy.io
 class Calibrator:
     def __init__(self, calculate_PCA = False, live_camera = True, images_path = None,
                  plot_bout_detector = False, start_frame = 0, end_frame = 1000, calib_frame_ranges = None,
-                 debug_PCA = False):
+                 debug_PCA = False, use_stytra_tracking = True):
         """
         Calculates returns calibrated image processor, PCA predictor, and bout detector
         :param calculate_PCA: boolean value, calculate PCs on fixed fish or use previously calculated projection matrix
@@ -31,6 +33,7 @@ class Calibrator:
         self.head_origin = None
         self.head_dest = None
         self.tail_tip = None
+        self.tail_mid = None
         self.focal_lim_x = None
         self.focal_lim_y = None
         self.pca_and_predict = None
@@ -39,6 +42,7 @@ class Calibrator:
         self.current_frame = 0
         self.camera = None
         self.debug_PCA = debug_PCA
+        self.use_stytra_tracking = use_stytra_tracking
 
         if live_camera:
             self.camera = SpinnakerCamera()
@@ -80,6 +84,7 @@ class Calibrator:
         self.head_origin = [round(value) for value in list(points[0])]
         self.head_dest =  [round(value) for value in list(points[1])]
         self.tail_tip = [round(value) for value in list(points[2])]
+        self.tail_mid = [round((self.head_origin[0] + self.tail_tip[0])/2),round((self.head_origin[1] + self.tail_tip[1])/2)]
         self.focal_lim_x = [self.head_origin[0] - FOCAL_LIM_X_MINUS, self.head_origin[0] + FOCAL_LIM_X_PLUS]
         self.focal_lim_y = [self.head_origin[1] - FOCAL_LIM_Y_MINUS, self.head_origin[1] + FOCAL_LIM_Y_PLUS]
 
@@ -113,10 +118,17 @@ class Calibrator:
 
         pca_and_predict = None
         if self.calculate_PCA:
-            tail_data = self._get_tail_points_for_PCA()
-            pca_and_predict = PCA(prediction_matrix_angle=B_angle, prediction_matrix_distance=B_distance, plot_PC=self.debug_PCA,
-                                  number_of_frames_for_predict=frames_from_bout)
-            pca_and_predict.calc_3_PCA(tail_data)
+            pca_and_predict = PCA(prediction_matrix_angle=B_angle, prediction_matrix_distance=B_distance
+                                  , plot_PC=self.debug_PCA)
+            if self.use_stytra_tracking:
+                tail_data = self._get_tail_angles_for_PCA()
+                theta_mean = np.mean(tail_data, axis=1)  # Mean angle per sample
+                theta_matrix = tail_data - theta_mean[:, np.newaxis]  # Normalize by subtracting mean angle
+            else:
+                tail_data = self._get_tail_points_for_PCA()
+                theta_matrix = PCA.calc_theta_matrix(tail_data)
+                theta_matrix = PCA.clean_nan_from_data(theta_matrix, remove_nan=True)
+            pca_and_predict.calc_3_PCA(theta_matrix)
         else:
             # imris PCs
             V = scipy.io.loadmat('Z:\Lab-Shared\Data\ClosedLoop\V.mat')['V']
@@ -128,8 +140,7 @@ class Calibrator:
                                   number_of_frames_for_predict=frames_from_bout)
         self.pca_and_predict = pca_and_predict
         self.bout_recognizer = self._init_bout_recognizer()
-        return self.pca_and_predict, self.image_processor, self.bout_recognizer, self.head_origin
-
+        return self.pca_and_predict, self.image_processor, self.bout_recognizer, self.head_origin, self.tail_tip
 
     def _calc_mean_min_frame(self,stimuli_queue):
         first_img_arr = self.first_image
@@ -148,11 +159,23 @@ class Calibrator:
             current_min = np.minimum(current_min, img_arr[self.focal_lim_y[0]:self.focal_lim_y[1],
                                                   self.focal_lim_x[0]:self.focal_lim_x[1]])
             current_sum = np.add(current_sum, img_arr, dtype=np.uint32)
+
         self.min_frame = current_min
         self.mean_frame = current_sum / self.num_frames
         self.image_processor.calc_masks(self.min_frame,self.mean_frame,self.head_origin,
                                         number_of_frames_used_in_calib=self.num_frames)
 
+
+    def _get_tail_angles_for_PCA(self):
+        tail_data = np.zeros((self.num_frames, 98))
+        self.current_frame = 0
+        for i in tqdm(range(self.num_frames)):
+            img_arr = self.load_image()
+            if self.calculate_PCA:
+                binary_image, subtracted_img = self.image_processor.preprocess_binary()
+                tail_angles, points = get_tail_angles(subtracted_img, self.head_origin, self.tail_tip)
+                tail_data[i, :] = tail_angles
+        return tail_data
 
     def _get_tail_points_for_PCA(self):
         tail_data = np.zeros((self.num_frames, 105, 2))
@@ -160,15 +183,18 @@ class Calibrator:
         for i in tqdm(range(self.num_frames)):
             img_arr = self.load_image()
             if self.calculate_PCA:
-                binary_image = self.image_processor.preprocess_binary()
-                tail_points = standalone_tail_tracking_func(binary_image,self.head_origin,0,False)
+                binary_image, subtracted_img = self.image_processor.preprocess_binary()
+                tail_points = standalone_tail_tracking_func(binary_image, self.head_origin, 0, False)
                 tail_data[i, :, :] = tail_points
         return tail_data
 
     def _init_bout_recognizer(self):
         first_img_arr = self.first_image
-        bout_recognizer = RecognizeBout(first_img_arr, 10, 3,
-                                        7, self.plot_bout_detector, self.tail_tip)
+        bout_recognizer = RecognizeBout(first_img_arr, 10, 4,
+                                        5, self.plot_bout_detector, self.tail_mid)
+        # 500 Hz
+        # bout_recognizer = RecognizeBout(first_img_arr, 10, 3,
+        #                                 7, self.plot_bout_detector, self.tail_mid)
         return bout_recognizer
 
 

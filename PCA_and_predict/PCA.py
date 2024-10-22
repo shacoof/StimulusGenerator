@@ -12,9 +12,8 @@ class PCA:
         :param prediction_matrix_angle: the already computed angle
         :param projection_matrix: the already computed principle component matrix 3x98
         """
-        self.theta_matrix = None
         self.projection_matrix = None
-        self.calibration_data = None
+        self.calibration_theta_matrix = None
         self.prediction_matrix_angle = prediction_matrix_angle
         self.prediction_matrix_distance = prediction_matrix_distance
         self.V = V
@@ -32,16 +31,14 @@ class PCA:
 
 
 
-    def calc_3_PCA(self, calibration_data: np.array) -> None:
+    def calc_3_PCA(self, calibration_theta_matrix: np.array) -> None:
         """
         Updates U to be the 98x3 matrix whose columns are the PCs of the calibration data
         :param calibration_data: numpy array of dimensions mx105x2 where m is the number of frames used in calibration and
          105 is the number of tail points
         :return: None
         """
-        self.calibration_data = calibration_data
-        self.theta_matrix = PCA.calc_theta_matrix(calibration_data)
-        self.theta_matrix = PCA.clean_nan_from_data(self.theta_matrix, remove_nan=True)
+        self.calibration_theta_matrix = calibration_theta_matrix
         self.get_svd()
         if self.plot_PC:
             # imris
@@ -53,9 +50,8 @@ class PCA:
             PCA.plot_PCs("imris_PCs", V)
 
 
-
     def get_svd(self, comp_num=3):
-        [U, S, VT] = svd(self.theta_matrix, full_matrices=False)
+        [U, S, VT] = svd(self.calibration_theta_matrix, full_matrices=False)
         VT[:comp_num, :] = VT[:comp_num, :] * np.sign(VT[:comp_num, 0])[:, np.newaxis]
         projection_matrix = VT / S[:, np.newaxis]  # the projection matrix
         self.projection_matrix = projection_matrix[:comp_num, :].T
@@ -92,20 +88,27 @@ class PCA:
             theta_matrix = theta_matrix[np.newaxis, :]  # Add new axis to make it 2D compatible
         return theta_matrix
 
-    def reduce_dimensionality_and_predict(self, tail_data: np.array, to_plot, frame_number = "") -> np.array:
+    def reduce_dimensionality_and_predict(self, tail_data_theta_mat: np.array, to_plot, frame_number = "", use_stytra_tracking=True) -> np.array:
         """
+        receives numpy array tail data with dimensions 35x98 where 30 is the number of frames, 98 are tail angles or
         receives numpy array tail data with dimensions 30x105x2 where 30 is the number of frames, 105 are the
-        interpolated tail points, and 2 are x,y coordinates
-        :param tail_data: 30 consecutive frames for prediction
+        interpolated tail points, and 2 are x,y coordinates depending on the use_stytra_tracking. if use_stytra_tracking
+        is True then tail_data_theta_mat show be the tail angles
+        :param tail_data_theta_mat: 35 consecutive frames for prediction of tail angles
         :return: angle and distance of the fish predicted for these frames
         """
         if self.projection_matrix is None:
             raise RuntimeError("need to run calc_3_PCA first")
-        if tail_data.shape[0] < self.number_of_frames_for_predict:
+        if tail_data_theta_mat.shape[0] < self.number_of_frames_for_predict:
             raise RuntimeError(f"need {self.number_of_frames_for_predict} frames to predict")
-        tail_data_theta_mat = PCA.calc_theta_matrix(tail_data)
-        tail_data_theta_mat = PCA.clean_nan_from_data(tail_data_theta_mat, remove_nan=False)
-        reduced_dim = tail_data_theta_mat @ self.projection_matrix
+        if use_stytra_tracking:
+            # reduce mean angle
+            theta_mean = np.mean(tail_data_theta_mat, axis=1)  # Mean angle per sample
+            theta_matrix = tail_data_theta_mat - theta_mean[:, np.newaxis]  # Normalize by subtracting mean angle
+        else:
+            theta_matrix = PCA.calc_theta_matrix(tail_data_theta_mat)
+            theta_matrix = PCA.clean_nan_from_data(theta_matrix, remove_nan=False)
+        reduced_dim = theta_matrix @ self.projection_matrix
         if to_plot:
             self.plot_coefficients(reduced_dim, frame_number)
             for i in range(self.number_of_frames_for_predict):
@@ -129,6 +132,7 @@ class PCA:
         # distance = np.square(reshaped_distance) @ new_distance
         return angle[0][0], distance[0][0]
 
+
     @staticmethod
     def clean_nan_from_data(data, remove_nan=False):
         if remove_nan:
@@ -145,11 +149,12 @@ class PCA:
                     data[i] = data[i - 1]
         return data
 
+
     def visualize_predicted_tail(self, tail_theta_vec, frame_num):
-        num_PCs = 3  # number of PCs
+        num_PCs = 3  # number of Principal Components
         reduced_dim = tail_theta_vec @ self.projection_matrix
 
-        dT = np.zeros(98)  # m' predicted theta vector
+        dT = np.zeros(98)  # predicted theta vector
         for PC in range(num_PCs):
             dT += reduced_dim[PC] * self.S[PC] * self.V[:, PC]  # U is the coefficient of the PC
 
@@ -157,18 +162,23 @@ class PCA:
         dy = np.sin(dT)
         all_x = np.cumsum(dx[::-1])
         all_y = np.cumsum(dy[::-1])
+
         # Set up the plot window
-        plt.cla()
+        plt.cla()  # Clear the current axes
         plt.xlabel('X')
         plt.ylabel('Y')
-        plt.title('Plot of Predicted Tail')
-        # Add a margin to the limits for better visualization
-        plt.xlim(0, 100)
-        plt.ylim(-5, 5)
-        plt.axis('equal')
-        # Plotting
+        plt.title(f'Plot of Predicted Tail - Frame {frame_num}')
+
+        # Plotting the tail prediction
         plt.plot(all_x, all_y, linewidth=2, label=f'Frame {frame_num}')
         plt.legend()
+
+        # Force the axis limits to stay fixed AFTER plotting
+        plt.xlim(0, 100)  # Set fixed x-axis limits
+        plt.ylim(-50, 50)  # Set fixed y-axis limits
+        plt.gca().set_aspect('auto', adjustable='box')  # Ensure no forced equal aspect ratio
+
+        # Update the plot without blocking
         plt.show(block=False)
         plt.pause(0.1)  # Pause briefly to ensure the plot window updates
 

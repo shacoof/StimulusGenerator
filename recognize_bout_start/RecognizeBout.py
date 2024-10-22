@@ -11,7 +11,7 @@ logging.getLogger('matplotlib.font_manager').setLevel(logging.WARNING)
 
 class RecognizeBout:
     def __init__(self, first_frame_from_calibration, bout_threshold_pixel,
-                 sum_moving_threshold_percentage, frame_memory, to_plot, tail_tip, x_dist_from_tail = 13,
+                 sum_moving_threshold_percentage, frame_memory, to_plot, tail_mid, x_dist_from_tail = 13,
                  y_dist_from_tail = 30):
         """
         Recognizes bouts and ibis each frame
@@ -24,11 +24,11 @@ class RecognizeBout:
         self.recent_frames_percentage = deque(maxlen=frame_memory)
         self.frame_memory = frame_memory
         self.previous_frame = None
-        self.tail_tip = tail_tip
+        self.tail_mid = tail_mid
         self.x_dist_from_tail = x_dist_from_tail
         self.y_dist_from_tail = y_dist_from_tail
-        self.current_frame = first_frame_from_calibration[self.tail_tip[1] - self.y_dist_from_tail: self.tail_tip[1] + self.y_dist_from_tail,
-                             self.tail_tip[0] - self.x_dist_from_tail: self.tail_tip[0] + self.x_dist_from_tail]
+        self.current_frame = first_frame_from_calibration[self.tail_mid[1] - self.y_dist_from_tail: self.tail_mid[1] + self.y_dist_from_tail,
+                             self.tail_mid[0] - self.x_dist_from_tail: self.tail_mid[0] + self.x_dist_from_tail]
         self.num_pixels = self.current_frame.shape[0]*self.current_frame.shape[1]
         self.to_plot = to_plot
         self.percentage = 0
@@ -37,8 +37,8 @@ class RecognizeBout:
 
 
     def update(self, frame):
-        cropped_frame = frame[self.tail_tip[1] - self.y_dist_from_tail: self.tail_tip[1] + self.y_dist_from_tail,
-                             self.tail_tip[0] - self.x_dist_from_tail: self.tail_tip[0] + self.x_dist_from_tail]
+        cropped_frame = frame[self.tail_mid[1] - self.y_dist_from_tail: self.tail_mid[1] + self.y_dist_from_tail,
+                        self.tail_mid[0] - self.x_dist_from_tail: self.tail_mid[0] + self.x_dist_from_tail]
         self.previous_frame = self.current_frame
         self.current_frame = cropped_frame
         # Compute the absolute difference between the frames
