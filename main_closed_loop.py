@@ -26,13 +26,13 @@ def worker_target(bout_frames_queue, tail_data_queue, head_origin, tail_tip):
             tail_data = standalone_tail_tracking_func(image, head_origin, 0, False)
         tail_data_queue.put((idx,tail_data))
         end_time = time.time()
-        #print(f"tail analysis time {end_time - start_time}")
+        print(f"tail analysis time {end_time - start_time}")
 
 
 class ClosedLoop:
     def __init__(self,pca_and_predict, image_processor, head_origin, tail_tip, bout_recognizer,
                  multiprocess_prediction_queue,
-                 num_workers=1, num_bout_frames = frames_from_bout):
+                 num_workers=3, num_bout_frames = frames_from_bout):
         """
         Preforms closed loop
         """
@@ -56,7 +56,8 @@ class ClosedLoop:
         self.head_origin = head_origin
         self.tail_tip = tail_tip
         self.num_workers = num_workers
-        self.start_workers()
+        if use_multi_processing:
+            self.start_workers()
 
     def start_workers(self):
         """Starts worker processes."""
@@ -94,8 +95,53 @@ class ClosedLoop:
                 processed_count += 1
         return bout_frames
 
-
     def process_frame(self, frame):
+        if frame is None:
+            return
+        self.current_frame += 1
+        self.image_processor.load_mat(frame)
+        self.bout_recognizer.update(self.image_processor.get_image_matrix())
+        # if this is a bout frame
+        if self.is_bout:
+            self.bout_index += 1
+            binary_image, subtracted = self.image_processor.preprocess_binary()
+            if use_stytra_tracking:
+                tail_angles, points = get_tail_angles(subtracted, self.head_origin, self.tail_tip)
+                self.bout_frames[self.bout_index, :] = tail_angles
+            else:
+                tail_points = standalone_tail_tracking_func(binary_image, head_origin, 0, False)
+                self.bout_frames[self.bout_index, :, :] = tail_points
+            #last bout frame
+            if self.bout_index == frames_from_bout - 1:
+                self.is_bout = False
+                angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(self.bout_frames, to_plot=debug_PCA)
+                if use_stytra_tracking:
+                    self.bout_frames = np.zeros((frames_from_bout, 98))
+                else:
+                    self.bout_frames = np.zeros((frames_from_bout, 105, 2))
+                new_angle, new_distance = self.renderer.calc_new_angle_and_size(angle, distance)
+                self.multiprocess_prediction_queue.put((angle, distance))
+                print(f"time to process bout {time.time() - self.bout_start_time}")
+                print(
+                    f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
+                print(
+                    f"frame {self.current_frame} new angle {new_angle}, new size {new_distance}")
+
+        else:
+            verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
+            if verdict:
+                self.bout_start_time = time.time()
+                self.bout_index = 0
+                self.is_bout = True
+                binary_image, subtracted = self.image_processor.preprocess_binary()
+                if use_stytra_tracking:
+                    tail_angles, points = get_tail_angles(subtracted, self.head_origin, self.tail_tip)
+                    self.bout_frames[self.bout_index, :] = tail_angles
+                else:
+                    tail_points = standalone_tail_tracking_func(binary_image, head_origin, 0, False)
+                    self.bout_frames[self.bout_index, :, :] = tail_points
+
+    def process_frame_multi_processing(self, frame):
         # time_now = time.time()
         # print(f"time {time_now - self.bout_start_time}")
         # self.bout_start_time = time_now
@@ -156,6 +202,7 @@ class ClosedLoop:
 
 
 if __name__ == '__main__':
+
     # every 1/500 sec call function with frame
     queue_closed_loop_prediction = multiprocessing.Queue()
     # directory settings
@@ -187,9 +234,13 @@ if __name__ == '__main__':
     for i in range(0,len(all_frame_mats),3):
         # here
         start_time = time.time()
-        closed_loop_class.process_frame(all_frame_mats[i])
+        if use_multi_processing:
+            closed_loop_class.process_frame_multi_processing(all_frame_mats[i])
+        else:
+            closed_loop_class.process_frame(all_frame_mats[i])
         end_time = time.time()
         time.sleep(0.006024)
+        #time.sleep(0.002)
 
         #print(f"time to process frame {end_time-start_time}")
     closed_loop_class.process_frame(None)

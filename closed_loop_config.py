@@ -5,6 +5,8 @@ use_camera = True
 use_stytra_tracking = True
 
 number_of_frames_calibration = 1000
+num_workers= 3 #for bout frame processing
+use_multi_processing = False
 fr_500 = False # program only supports frame rate 500 or 166
 if fr_500:
     camera_frame_rate = 500
