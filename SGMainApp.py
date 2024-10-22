@@ -37,6 +37,7 @@ class App:
         self.image_processor = None
         self.bout_recognizer = None
         self.head_origin = None
+        self.tail_tip = None
         self.calibrator = calibrator
         self.screen = screen
         self.state = None
@@ -135,7 +136,7 @@ class App:
     def start_calibrating(self, stimuli_queue):
         # Calibration process running in its own thread
         [self.pca_and_predict, self.image_processor, self.bout_recognizer,
-        self.head_origin] = self.calibrator.start_calibrating(stimuli_queue)
+        self.head_origin, self.tail_tip] = self.calibrator.start_calibrating(stimuli_queue)
         self.state = constants.PAUSE
 
 

@@ -3,6 +3,8 @@ from scipy.linalg import svd
 import matplotlib.pyplot as plt
 import scipy.io
 
+from closed_loop_config import use_stytra_tracking, fr_500
+
 
 class PCA:
     def __init__(self, prediction_matrix_angle=None, prediction_matrix_distance=None, V=None,
@@ -88,10 +90,11 @@ class PCA:
             theta_matrix = theta_matrix[np.newaxis, :]  # Add new axis to make it 2D compatible
         return theta_matrix
 
-    def reduce_dimensionality_and_predict(self, tail_data_theta_mat: np.array, to_plot, frame_number = "", use_stytra_tracking=True) -> np.array:
+    def reduce_dimensionality_and_predict(self, tail_data_theta_mat: np.array, to_plot, frame_number = "",
+                                          use_stytra_tracking=use_stytra_tracking, fr_500 = fr_500) -> np.array:
         """
-        receives numpy array tail data with dimensions 35x98 where 30 is the number of frames, 98 are tail angles or
-        receives numpy array tail data with dimensions 30x105x2 where 30 is the number of frames, 105 are the
+        receives numpy array tail data with dimensions 35x98 where 35 is the number of frames, 98 are tail angles or
+        receives numpy array tail data with dimensions 30x105x2 where 35 is the number of frames, 105 are the
         interpolated tail points, and 2 are x,y coordinates depending on the use_stytra_tracking. if use_stytra_tracking
         is True then tail_data_theta_mat show be the tail angles
         :param tail_data_theta_mat: 35 consecutive frames for prediction of tail angles
@@ -113,23 +116,17 @@ class PCA:
             self.plot_coefficients(reduced_dim, frame_number)
             for i in range(self.number_of_frames_for_predict):
                 self.visualize_predicted_tail(tail_data_theta_mat[i], i)
-        #fr 166
-        reshaped_angle = reduced_dim[0:10,:].T.reshape(1, 30)
-        angle = reshaped_angle @ self.prediction_matrix_angle
-        reshaped_distance = reduced_dim[3:12, :].T.reshape(1, 27)
-        distance = np.square(reshaped_distance) @ self.prediction_matrix_distance
-        # regular
-        # reshaped_angle = reduced_dim[0:30].T.reshape(1, 90)
-        # angle = reshaped_angle @ self.prediction_matrix_angle
-        # reshaped_distance = reduced_dim[9:35].T.reshape(1, 78)
-        # distance = np.square(reshaped_distance) @ self.prediction_matrix_distance
-        # using late frames in the prediction
-        # reshaped_angle = reduced_dim[0:27].T.reshape(1, 81)
-        # new_angle = np.concatenate((self.prediction_matrix_angle[3:30], self.prediction_matrix_angle[33:60], self.prediction_matrix_angle[63:90]))
-        # angle = reshaped_angle @ new_angle
-        # reshaped_distance = reduced_dim[9:32].T.reshape(1, 69)
-        # new_distance = np.concatenate((self.prediction_matrix_distance[3:26], self.prediction_matrix_distance[29:52], self.prediction_matrix_distance[55:78]))
-        # distance = np.square(reshaped_distance) @ new_distance
+        if fr_500:
+            reshaped_angle = reduced_dim[0:30].T.reshape(1, 90)
+            angle = reshaped_angle @ self.prediction_matrix_angle
+            reshaped_distance = reduced_dim[9:35].T.reshape(1, 78)
+            distance = np.square(reshaped_distance) @ self.prediction_matrix_distance
+        else:
+            # fr 166
+            reshaped_angle = reduced_dim[0:10, :].T.reshape(1, 30)
+            angle = reshaped_angle @ self.prediction_matrix_angle
+            reshaped_distance = reduced_dim[3:12, :].T.reshape(1, 27)
+            distance = np.square(reshaped_distance) @ self.prediction_matrix_distance
         return angle[0][0], distance[0][0]
 
 

@@ -105,15 +105,18 @@ class Calibrator:
 
     def start_calibrating(self, stimuli_queue = None):
         self._calc_mean_min_frame(stimuli_queue)
-        # Shai
-        # B_angle = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['angle_solution']
-        # B_distance = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['distance_solution']
+        if fr_500:
+            # Shai
+            B_angle = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['angle_solution']
+            B_distance = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['distance_solution']
+        else:
+            # Imri 500/3 Hz
+            B_angle = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")['angle_solution']
+            B_distance = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")['distance_solution']
         # Imri 500 Hz
         # B_angle = scipy.io.loadmat('Z:\Lab-Shared\Data\ClosedLoop\B_angle.mat')['angle_solution']
         # B_distance = scipy.io.loadmat('Z:\Lab-Shared\Data\ClosedLoop\B_distance.mat')['distance_solution']
-        # Imri 500/3 Hz
-        B_angle = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")['angle_solution']
-        B_distance = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")['distance_solution']
+
 
 
         pca_and_predict = None
@@ -190,11 +193,12 @@ class Calibrator:
 
     def _init_bout_recognizer(self):
         first_img_arr = self.first_image
-        bout_recognizer = RecognizeBout(first_img_arr, 10, 4,
+        if fr_500:
+            bout_recognizer = RecognizeBout(first_img_arr, 10, 3,
+                                            7, self.plot_bout_detector, self.tail_mid)
+        else: #166 Hz
+            bout_recognizer = RecognizeBout(first_img_arr, 10, 4,
                                         5, self.plot_bout_detector, self.tail_mid)
-        # 500 Hz
-        # bout_recognizer = RecognizeBout(first_img_arr, 10, 3,
-        #                                 7, self.plot_bout_detector, self.tail_mid)
         return bout_recognizer
 
 

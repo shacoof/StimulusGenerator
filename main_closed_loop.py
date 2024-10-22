@@ -7,10 +7,11 @@ import os
 import time
 import multiprocessing
 from image_processor.tail_tracker import standalone_tail_tracking_func
+from image_processor.stytra_tail_tracking import get_tail_angles
 from PIL import Image
 
 
-def worker_target(bout_frames_queue, tail_data_queue, head_origin):
+def worker_target(bout_frames_queue, tail_data_queue, head_origin, tail_tip):
     """Worker method that processes matrices from the input queue."""
     while True:
         tuple_val = bout_frames_queue.get()
@@ -18,16 +19,20 @@ def worker_target(bout_frames_queue, tail_data_queue, head_origin):
             # Terminate worker on receiving None
             break
         start_time = time.time()
-        idx, binary_image = tuple_val[0], tuple_val[1]
-        tail_data = standalone_tail_tracking_func(binary_image, head_origin, 0, False)
+        idx, image = tuple_val[0], tuple_val[1]
+        if use_stytra_tracking:
+            tail_data, _ = get_tail_angles(image,head_origin,tail_tip)
+        else:
+            tail_data = standalone_tail_tracking_func(image, head_origin, 0, False)
         tail_data_queue.put((idx,tail_data))
         end_time = time.time()
         #print(f"tail analysis time {end_time - start_time}")
 
 
 class ClosedLoop:
-    def __init__(self,pca_and_predict, image_processor, head_origin, bout_recognizer, multiprocess_prediction_queue,
-                 num_workers=1, num_bout_frames = 12):
+    def __init__(self,pca_and_predict, image_processor, head_origin, tail_tip, bout_recognizer,
+                 multiprocess_prediction_queue,
+                 num_workers=1, num_bout_frames = frames_from_bout):
         """
         Preforms closed loop
         """
@@ -36,7 +41,10 @@ class ClosedLoop:
         self.bout_recognizer = bout_recognizer
         self.is_bout = False
         self.bout_index = 0
-        self.bout_frames = np.zeros((frames_from_bout, 105, 2))
+        if use_stytra_tracking:
+            self.bout_frames = np.zeros((frames_from_bout, 98))
+        else:
+            self.bout_frames = np.zeros((frames_from_bout, 105, 2))
         self.current_frame = 0
         self.renderer = Renderer()
         self.multiprocess_prediction_queue = multiprocess_prediction_queue
@@ -46,6 +54,7 @@ class ClosedLoop:
         self.tail_data_queue = multiprocessing.Queue(maxsize=num_bout_frames)
         self.workers = []
         self.head_origin = head_origin
+        self.tail_tip = tail_tip
         self.num_workers = num_workers
         self.start_workers()
 
@@ -54,7 +63,7 @@ class ClosedLoop:
         for _ in range(self.num_workers):
             frame_processing_worker = multiprocessing.Process(
                         target=worker_target,
-                         args=(self.bout_frames_queue, self.tail_data_queue, self.head_origin))
+                         args=(self.bout_frames_queue, self.tail_data_queue, self.head_origin, self.tail_tip))
             frame_processing_worker.start()
             self.workers.append(frame_processing_worker)
 
@@ -66,7 +75,10 @@ class ClosedLoop:
             p.join()
 
     def end_of_bout(self):
-        bout_frames = np.zeros((frames_from_bout, 105, 2))
+        if use_stytra_tracking:
+            bout_frames = np.zeros((frames_from_bout, 98))
+        else:
+            bout_frames = np.zeros((frames_from_bout, 105, 2))
         processed_count = 0
         while processed_count < self.num_bout_frames:
             # Check if the output queue is at capacity
@@ -75,7 +87,10 @@ class ClosedLoop:
             # Get and store the results in the list by their original index
             if not self.tail_data_queue.empty():
                 bout_index, tail_data = self.tail_data_queue.get()
-                bout_frames[bout_index - 1, :, :] = tail_data  # Place the result in the correct position based on the index
+                if use_stytra_tracking:
+                    bout_frames[bout_index - 1, :] = tail_data
+                else:
+                    bout_frames[bout_index - 1, :, :] = tail_data
                 processed_count += 1
         return bout_frames
 
@@ -105,9 +120,12 @@ class ClosedLoop:
         # if this is a bout frame
         if self.is_bout:
             self.bout_index += 1
-            binary_image = self.image_processor.preprocess_binary()
+            binary_image, subtracted = self.image_processor.preprocess_binary()
             # Put in multiprocess queue
-            self.bout_frames_queue.put((self.bout_index,binary_image))
+            if use_stytra_tracking:
+                self.bout_frames_queue.put((self.bout_index, subtracted))
+            else:
+                self.bout_frames_queue.put((self.bout_index,binary_image))
 
             #last bout frame
             if self.bout_index == frames_from_bout:
@@ -129,9 +147,12 @@ class ClosedLoop:
                 self.bout_start_time = time.time()
                 self.is_bout = True
                 self.bout_index += 1
-                binary_image = self.image_processor.preprocess_binary()
+                binary_image, subtracted = self.image_processor.preprocess_binary()
                 # Put in multiprocess queue
-                self.bout_frames_queue.put((self.bout_index,binary_image))
+                if use_stytra_tracking:
+                    self.bout_frames_queue.put((self.bout_index, subtracted))
+                else:
+                    self.bout_frames_queue.put((self.bout_index, binary_image))
 
 
 if __name__ == '__main__':
@@ -145,8 +166,9 @@ if __name__ == '__main__':
                             plot_bout_detector=False,start_frame=start_frame,
                             end_frame=start_frame + 500,
                             debug_PCA=False,images_path=images_path)
-    [pca_and_predict, image_processor, bout_recognizer, head_origin] = calibrator.start_calibrating()
-    closed_loop_class = ClosedLoop(pca_and_predict, image_processor, head_origin, bout_recognizer, queue_closed_loop_prediction)
+    [pca_and_predict, image_processor, bout_recognizer, head_origin, tail_tip] = calibrator.start_calibrating()
+    closed_loop_class = ClosedLoop(pca_and_predict, image_processor, head_origin, tail_tip, bout_recognizer
+                                   , queue_closed_loop_prediction)
     # load frames
     all_frame_mats = []
 
