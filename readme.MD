@@ -37,7 +37,7 @@ split_files = in seconds, controls splitting files frequency to avoid program cr
 image_file_type = can be PNG, JPEG or any other file type supported by CV2
 
 stimulusConfig.csv
-The coordinates of the virtual screen are between 0-999. top left corenr is (0,0)
+The coordinates of the virtual screen are between 0-999. top left corner is (0,0)
 We automatically translates these coordinates to the real size of the virtual screen, which might change depending on the setup
 example : if the real virtual screensize is 100x50 then all coordinates between (0,0) and (99,49) will be mapped to (0,0)
 the formula is trunc(x/virtual screen width) and trunc(y/virtual screen height)

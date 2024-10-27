@@ -46,7 +46,6 @@ class ClosedLoop:
         else:
             self.bout_frames = np.zeros((frames_from_bout, 105, 2))
         self.current_frame = 0
-        self.renderer = Renderer()
         self.multiprocess_prediction_queue = multiprocess_prediction_queue
         self.bout_start_time = 0
         self.num_bout_frames = num_bout_frames
@@ -96,109 +95,124 @@ class ClosedLoop:
         return bout_frames
 
     def process_frame(self, frame):
-        if frame is None:
-            return
-        self.current_frame += 1
-        self.image_processor.load_mat(frame)
-        self.bout_recognizer.update(self.image_processor.get_image_matrix())
-        # if this is a bout frame
-        if self.is_bout:
-            self.bout_index += 1
-            binary_image, subtracted = self.image_processor.preprocess_binary()
-            if use_stytra_tracking:
-                tail_angles, points = get_tail_angles(subtracted, self.head_origin, self.tail_tip)
-                self.bout_frames[self.bout_index, :] = tail_angles
-            else:
-                tail_points = standalone_tail_tracking_func(binary_image, head_origin, 0, False)
-                self.bout_frames[self.bout_index, :, :] = tail_points
-            #last bout frame
-            if self.bout_index == frames_from_bout - 1:
-                self.is_bout = False
-                angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(self.bout_frames, to_plot=debug_PCA)
-                if use_stytra_tracking:
-                    self.bout_frames = np.zeros((frames_from_bout, 98))
-                else:
-                    self.bout_frames = np.zeros((frames_from_bout, 105, 2))
-                new_angle, new_distance = self.renderer.calc_new_angle_and_size(angle, distance)
-                self.multiprocess_prediction_queue.put((angle, distance))
-                print(f"time to process bout {time.time() - self.bout_start_time}")
-                print(
-                    f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
-                print(
-                    f"frame {self.current_frame} new angle {new_angle}, new size {new_distance}")
+        time_now = time.time()
+        self.bout_start_time = time_now
 
+        time.sleep(10)
+        if self.current_frame % 2 == 0:
+            angle = -20
+            distance = 0.5
         else:
-            verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
-            if verdict:
-                self.bout_start_time = time.time()
-                self.bout_index = 0
-                self.is_bout = True
-                binary_image, subtracted = self.image_processor.preprocess_binary()
-                if use_stytra_tracking:
-                    tail_angles, points = get_tail_angles(subtracted, self.head_origin, self.tail_tip)
-                    self.bout_frames[self.bout_index, :] = tail_angles
-                else:
-                    tail_points = standalone_tail_tracking_func(binary_image, head_origin, 0, False)
-                    self.bout_frames[self.bout_index, :, :] = tail_points
+            angle = 20
+            distance = 0.5
+        print(f"angle {angle} distance {distance}")
+        self.multiprocess_prediction_queue.put((angle, distance))
+        self.current_frame += 1
+
+        # if frame is None:
+        #     return
+        # self.current_frame += 1
+        # self.image_processor.load_mat(frame)
+        # self.bout_recognizer.update(self.image_processor.get_image_matrix())
+        # # if this is a bout frame
+        # if self.is_bout:
+        #     self.bout_index += 1
+        #     binary_image, subtracted = self.image_processor.preprocess_binary()
+        #     start_time = time.time()
+        #     if use_stytra_tracking:
+        #         tail_angles, points = get_tail_angles(subtracted, self.head_origin, self.tail_tip)
+        #         self.bout_frames[self.bout_index, :] = tail_angles
+        #     else:
+        #         tail_points = standalone_tail_tracking_func(binary_image, head_origin, 0, False)
+        #         self.bout_frames[self.bout_index, :, :] = tail_points
+        #     end_time = time.time()
+        #     #print(f"time frame {end_time - start_time}")
+        #     #last bout frame
+        #     if self.bout_index == frames_from_bout - 1:
+        #         start_time = time.time()
+        #         self.is_bout = False
+        #         angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(self.bout_frames, to_plot=debug_PCA)
+        #         if use_stytra_tracking:
+        #             self.bout_frames = np.zeros((frames_from_bout, 98))
+        #         else:
+        #             self.bout_frames = np.zeros((frames_from_bout, 105, 2))
+        #         self.multiprocess_prediction_queue.put((angle, distance))
+        #         #print(f"time end {time.time() - start_time}")
+        #         print(f"time to process bout {time.time() - self.bout_start_time}")
+        #         print(
+        #             f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
+        #
+        # else:
+        #     verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
+        #     if verdict:
+        #         self.bout_start_time = time.time()
+        #         self.bout_index = 0
+        #         self.is_bout = True
+        #         binary_image, subtracted = self.image_processor.preprocess_binary()
+        #         if use_stytra_tracking:
+        #             tail_angles, points = get_tail_angles(subtracted, self.head_origin, self.tail_tip)
+        #             self.bout_frames[self.bout_index, :] = tail_angles
+        #         else:
+        #             tail_points = standalone_tail_tracking_func(binary_image, head_origin, 0, False)
+        #             self.bout_frames[self.bout_index, :, :] = tail_points
 
     def process_frame_multi_processing(self, frame):
-        # time_now = time.time()
-        # print(f"time {time_now - self.bout_start_time}")
-        # self.bout_start_time = time_now
+        time_now = time.time()
+        print(f"time {time_now - self.bout_start_time}")
+        self.bout_start_time = time_now
 
-        # time.sleep(1)
-        # if self.current_frame % 2 ==0:
-        #     new_angle, new_distance = self.renderer.calc_new_angle_and_size(100, 0)
-        # else:
-        #     new_angle, new_distance = self.renderer.calc_new_angle_and_size(-100, 0)
-        # print(f"angle {new_angle} distance {new_distance}")
-        # self.multiprocess_prediction_queue.put((new_angle, new_distance))
-        # self.current_frame += 1
-
-        # program stop
-        if frame is None:
-            self.stop_workers()
-            return
-
-        self.current_frame += 1
-        self.image_processor.load_mat(frame)
-        self.bout_recognizer.update(self.image_processor.get_image_matrix())
-        # if this is a bout frame
-        if self.is_bout:
-            self.bout_index += 1
-            binary_image, subtracted = self.image_processor.preprocess_binary()
-            # Put in multiprocess queue
-            if use_stytra_tracking:
-                self.bout_frames_queue.put((self.bout_index, subtracted))
-            else:
-                self.bout_frames_queue.put((self.bout_index,binary_image))
-
-            #last bout frame
-            if self.bout_index == frames_from_bout:
-                self.is_bout = False
-                self.bout_index = 0
-                bout_frames = self.end_of_bout()
-                angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(bout_frames, to_plot=debug_PCA)
-                new_angle, new_distance = self.renderer.calc_new_angle_and_size(angle, distance)
-                self.multiprocess_prediction_queue.put((new_angle, new_distance))
-                bout_end_time = time.time()
-                print(f"time to process bout {bout_end_time - self.bout_start_time}")
-                print(
-                    f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
-                print(
-                    f"frame {self.current_frame} new angle {new_angle}, new size {new_distance}")
+        time.sleep(1)
+        if self.current_frame % 2 ==0:
+            angle = 20
+            distance = 0.5
         else:
-            verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
-            if verdict:
-                self.bout_start_time = time.time()
-                self.is_bout = True
-                self.bout_index += 1
-                binary_image, subtracted = self.image_processor.preprocess_binary()
-                # Put in multiprocess queue
-                if use_stytra_tracking:
-                    self.bout_frames_queue.put((self.bout_index, subtracted))
-                else:
-                    self.bout_frames_queue.put((self.bout_index, binary_image))
+            angle = -20
+            distance = 0.5
+        print(f"angle {angle} distance {distance}")
+        self.multiprocess_prediction_queue.put((angle, distance))
+        self.current_frame += 1
+
+        # # program stop
+        # if frame is None:
+        #     self.stop_workers()
+        #     return
+        #
+        # self.current_frame += 1
+        # self.image_processor.load_mat(frame)
+        # self.bout_recognizer.update(self.image_processor.get_image_matrix())
+        # # if this is a bout frame
+        # if self.is_bout:
+        #     self.bout_index += 1
+        #     binary_image, subtracted = self.image_processor.preprocess_binary()
+        #     # Put in multiprocess queue
+        #     if use_stytra_tracking:
+        #         self.bout_frames_queue.put((self.bout_index, subtracted))
+        #     else:
+        #         self.bout_frames_queue.put((self.bout_index,binary_image))
+        #
+        #     #last bout frame
+        #     if self.bout_index == frames_from_bout:
+        #         self.is_bout = False
+        #         self.bout_index = 0
+        #         bout_frames = self.end_of_bout()
+        #         angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(bout_frames, to_plot=debug_PCA)
+        #         self.multiprocess_prediction_queue.put((angle, distance))
+        #         bout_end_time = time.time()
+        #         print(f"time to process bout {bout_end_time - self.bout_start_time}")
+        #         print(
+        #             f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
+        # else:
+        #     verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
+        #     if verdict:
+        #         self.bout_start_time = time.time()
+        #         self.is_bout = True
+        #         self.bout_index += 1
+        #         binary_image, subtracted = self.image_processor.preprocess_binary()
+        #         # Put in multiprocess queue
+        #         if use_stytra_tracking:
+        #             self.bout_frames_queue.put((self.bout_index, subtracted))
+        #         else:
+        #             self.bout_frames_queue.put((self.bout_index, binary_image))
 
 
 if __name__ == '__main__':
@@ -231,7 +245,7 @@ if __name__ == '__main__':
             print(f"Error loading image: {e}")
 
 
-    for i in range(0,len(all_frame_mats),3):
+    for i in range(len(all_frame_mats)):
         # here
         start_time = time.time()
         if use_multi_processing:
@@ -239,9 +253,10 @@ if __name__ == '__main__':
         else:
             closed_loop_class.process_frame(all_frame_mats[i])
         end_time = time.time()
-        time.sleep(0.006024)
+        print(f"time to process frame {end_time-start_time}")
+
+        #time.sleep(0.006024)
         #time.sleep(0.002)
 
-        #print(f"time to process frame {end_time-start_time}")
-    closed_loop_class.process_frame(None)
+    closed_loop_class.process_frame_multi_processing(None)
 

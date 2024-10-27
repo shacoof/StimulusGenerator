@@ -127,7 +127,7 @@ class PCA:
             angle = reshaped_angle @ self.prediction_matrix_angle
             reshaped_distance = reduced_dim[3:12, :].T.reshape(1, 27)
             distance = np.square(reshaped_distance) @ self.prediction_matrix_distance
-        return angle[0][0], distance[0][0]
+        return round(angle[0][0],2), round(distance[0][0],2)
 
 
     @staticmethod

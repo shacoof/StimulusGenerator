@@ -69,7 +69,6 @@ def get_tail_angles(im, tail_start, tail_end, n_segments = 25, tail_filter_width
     # we do not need to record a large amount of angles
     if tail_filter_width > 0:
         angles = gaussian_filter1d(angles, tail_filter_width, mode="nearest")
-    #angles[:4] = np.clip(angles[:4], -0.1, 0.1)
 
     # Generate the x-values for the original data points
     x_original = np.linspace(0, 1, n_segments - 1)
