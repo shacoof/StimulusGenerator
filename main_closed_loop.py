@@ -8,44 +8,51 @@ from image_processor.stytra_tail_tracking import get_tail_angles, reproduce_tail
 from PIL import Image
 import matplotlib.pyplot as plt
 
-def plot_worker(plot_queue):
+def plot_worker(queue):
     """
     Worker function that listens to the plot_queue and handles the plotting
     of tail traces to avoid delays in the main process.
     """
+    plt.ion()
+    fig, ax = plt.subplots()
+    img_plot = None
+    tail_line, = ax.plot([], [], 'red', marker='o', markersize=1, label="Tail Trace")
+    ax.axis('off')
+
     while True:
-        plot_data = plot_queue.get()
-        if plot_data is None:  # Termination signal
+        item = queue.get()
+        if item is None:
             break
 
-        start_point, angles, image, seg_length, is_bout, bout_index = plot_data
-        tail_points = reproduce_tail_from_angles(start_point, angles, seg_length)
+        start_point, angles, image, seg_length, is_bout, bout_index = item
 
-        # Extract x and y points for plotting
-        tail_x, tail_y = zip(*tail_points)
-
-        # Clear the current figure
-        plt.clf()
-
-        # Create subplot (or get existing one if already created)
-        ax = plt.gca()
-
-        # Plot the image
-        ax.imshow(image, cmap='gray', vmin=0, vmax=255)
-        ax.plot(tail_x, tail_y, 'red', marker='o', markersize=1, label="Tail Trace")
-        ax.scatter(start_point[0], start_point[1], color='red', label="Start Point")
-
-        # Update the title based on the is_bout flag
-        if is_bout:
-            ax.set_title(f"Bout Detected frame {bout_index}", color='red')
+        # Update image plot (only if needed)
+        if img_plot is None:
+            img_plot = ax.imshow(image, cmap='gray', vmin=0, vmax=255)
         else:
-            ax.set_title("Reproduced Tail from Angles")
+            img_plot.set_data(image)
 
-        ax.axis('off')
+        # Calculate tail points
+        x, y = start_point
+        tail_points = [(x, y)]
+        for angle in -angles[::-1]:
+            dx = seg_length * np.sin(angle)
+            dy = seg_length * np.cos(angle)
+            x += dx
+            y += dy
+            tail_points.append((x, y))
 
-        # Update the plot
-        plt.draw()
-        plt.pause(0.01)  # Pause briefly to ensure the plot window updates
+        tail_x, tail_y = zip(*tail_points)
+        tail_line.set_data(tail_x, tail_y)
+
+        # Set title
+        ax.set_title(f"Bout Detected frame {bout_index}" if is_bout else "Reproduced Tail from Angles",
+                     color='red' if is_bout else 'black')
+
+        # Draw efficiently with blit
+        fig.canvas.draw()
+        fig.canvas.flush_events()
+    plt.close()
 
 
 def worker_target(bout_frames_queue, tail_data_queue, head_origin, tail_tip):
@@ -75,6 +82,7 @@ class ClosedLoop:
         self.bout_recognizer = bout_recognizer
         self.is_bout = False
         self.bout_index = 0
+        self.frame_num = 0
         self.bout_frames = np.zeros((frames_from_bout, 98))
         self.current_frame = 0
         self.multiprocess_prediction_queue = multiprocess_prediction_queue
@@ -128,15 +136,16 @@ class ClosedLoop:
         """
         Prepare the data for plotting and send it to the plot queue.
         """
-        is_bout = self.is_bout  # Check if a bout is detected
-        self.plot_queue.put((start_point, angles, image, seg_length, is_bout, self.bout_index))
+        print("Queue size:", self.plot_queue.qsize())
+        self.plot_queue.put((start_point, angles, image, seg_length,  self.is_bout, self.bout_index))
 
     def stop_plotting(self):
         """Terminate the plot worker."""
-        self.plot_queue.put(None)  # Signal the plot worker to terminate
+        self.plot_queue.put(None)
         self.plot_process.join()
 
     def process_frame(self, frame):
+        self.frame_num += 1
         # time_now = time.time()
         # self.bout_start_time = time_now
         #
@@ -161,7 +170,7 @@ class ClosedLoop:
         self.bout_recognizer.update(self.image_processor.get_image_matrix())
         binary_image, subtracted = self.image_processor.preprocess_binary()
         tail_angles, points, seg_length = get_tail_angles(subtracted, self.head_origin, self.tail_tip)
-        if debug_mode:
+        if debug_mode and self.frame_num % 13 == 0:
             self.debug_plot(self.head_origin, tail_angles, subtracted, seg_length)
 
         # if this is a bout frame
@@ -253,7 +262,7 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"Error loading image: {e}")
 
-
+    start_total = time.time()
     for i in range(len(all_frame_mats)):
         start_time = time.time()
         if use_multi_processing:
@@ -265,6 +274,6 @@ if __name__ == '__main__':
 
         #time.sleep(0.006024)
         #time.sleep(0.002)
-
-    closed_loop_class.process_frame_multi_processing(None)
+    print(f"total time = {time.time() - start_total}")
+    closed_loop_class.process_frame(None)
 
