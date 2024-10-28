@@ -6,103 +6,56 @@ from main_closed_loop import ClosedLoop
 from Stimulus import Stimulus
 from constants import *
 import copy
+import pandas as pd
+
 
 class StimuliGeneratorClosedLoop:
-    def __init__(self, canvas, app, closed_loop_pred_queue, output_device=None, camera_queue=None, calib_mode = False):
+    def __init__(self, canvas, app, closed_loop_pred_queue, output_device=None, camera_queue=None, calib_mode=False):
         self.start_trial_from_left = False
         self.calib_mode = calib_mode
-        float_duration = StimuliGeneratorClosedLoop.calc_duration(start_angle, end_angle, stimuli_floating_speed)
-        self.basic_stimulus_struct = {
-            "exitCriteria": "Time",
-            "startX": str(start_angle),
-            "startY": '450',
-            "endX": '30',
-            "endY": '450',
-            "repetitions": '1',
-            "fastSpeed": '0',
-            "slowSpeed": '0',
-            "startShapeRadius": '4',
-            "endShapeRadius": '4',
-            "fastDuration": '100',
-            "slowDuration": '100',
-            "startMode": "AFTER",
-            "delay": '0',
-            "duration": '100',  # ms
-            "xType": "degrees"
-        }
-        self.stimulus_struct_start_left = {
-            "exitCriteria": "Time",
-            "startX": str(start_angle),
-            "startY": '450',
-            "endX": str(end_angle),
-            "endY": '450',
-            "repetitions": '1',
-            "fastSpeed": '0',
-            "slowSpeed": '0',
-            "startShapeRadius": '4',
-            "endShapeRadius": '4',
-            "fastDuration": '100',
-            "slowDuration": '100',
-            "startMode": "AFTER",
-            "delay": '0',
-            "duration": float_duration,  # ms
-            "xType": "degrees"
-        }
-        self.stimulus_struct_start_right = {
-            "exitCriteria": "Time",
-            "startX": str(end_angle),
-            "startY": '450',
-            "endX": str(start_angle),
-            "endY": '450',
-            "repetitions": '1',
-            "fastSpeed": '0',
-            "slowSpeed": '0',
-            "startShapeRadius": '4',
-            "endShapeRadius": '4',
-            "fastDuration": '100',
-            "slowDuration": '100',
-            "startMode": "AFTER",
-            "delay": '0',
-            "duration": float_duration,  # ms
-            "xType": "degrees"
-        }
-        self.stimulus_struct_spacer = {
-            "exitCriteria": "Spacer",
-            "startX": '0',
-            "startY": '0',
-            "endX": '0',
-            "endY": '0',
-            "repetitions": '1',
-            "fastSpeed": '0',
-            "slowSpeed": '0',
-            "startShapeRadius": '4',
-            "endShapeRadius": '4',
-            "fastDuration": '0',
-            "slowDuration": '0',
-            "startMode": "AFTER",
-            "delay": '0',
-            "duration": '5000',  # ms
-            "xType": "degrees"
-        }
-        self.current_stim_struct = None
         self.camera_queue = camera_queue
         self.closed_loop_pred_queue = closed_loop_pred_queue
         self.output_device = output_device
-        self.batchNo = 0
         self.canvas = canvas
         self.app = app
-        if calib_mode:
-            self.current_stim_struct = copy.deepcopy(self.basic_stimulus_struct)
-        else:
-            self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
-        self.current_stimulus = Stimulus(self.current_stim_struct, canvas, app, 0)
-        self.renderer = Renderer(int(self.current_stim_struct["startX"]), int(self.current_stim_struct["startShapeRadius"]))
+        self.batchNo = 0
         self.stim_id = 1
         self.stimuli_type = "floating"
+        self.stimuli_log = pd.DataFrame(
+            columns=['TS', 'Event Type', 'End/Start', 'Predicted Angle', 'Predicted Distance',
+                     'Current Angle', 'Current Size'])
+        self._init_stimulus_structs()
+        self.current_stim_struct = copy.deepcopy(self.basic_stimulus_struct) if calib_mode else copy.deepcopy(
+            self.stimulus_struct_start_left)
+        self.current_stimulus = Stimulus(self.current_stim_struct, canvas, app, 0)
+        self.renderer = Renderer(int(self.current_stim_struct["startX"]),
+                                 int(self.current_stim_struct["startShapeRadius"]))
+
+    def _init_stimulus_structs(self):
+        float_duration = self.calc_duration(start_angle, end_angle, stimuli_floating_speed)
+        self.basic_stimulus_struct = {
+            "exitCriteria": "Time", "startX": str(start_angle), "startY": '450', "endX": '30', "endY": '450',
+            "repetitions": '1', "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": '4', "endShapeRadius": '4',
+            "fastDuration": '100', "slowDuration": '100', "startMode": "AFTER", "delay": '0', "duration": '100',
+            "xType": "degrees"
+        }
+        self.stimulus_struct_start_left = copy.deepcopy(self.basic_stimulus_struct)
+        self.stimulus_struct_start_left.update(
+            {"startX": str(start_angle), "endX": str(end_angle), "duration": float_duration})
+
+        self.stimulus_struct_start_right = copy.deepcopy(self.basic_stimulus_struct)
+        self.stimulus_struct_start_right.update(
+            {"startX": str(end_angle), "endX": str(start_angle), "duration": float_duration})
+
+        self.stimulus_struct_spacer = {
+            "exitCriteria": "Spacer", "startX": '0', "startY": '0', "endX": '0', "endY": '0', "repetitions": '1',
+            "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": '4', "endShapeRadius": '4', "fastDuration": '0',
+            "slowDuration": '0', "startMode": "AFTER", "delay": '0', "duration": str(spacer_duration),
+            "xType": "degrees"
+        }
 
     @staticmethod
     def calc_duration(start_angle, end_angle, angular_velocity):
-        print(f"angle start {start_angle} angle end {end_angle}")
         duration = str(round(abs(end_angle - start_angle) / angular_velocity * 1000))
         return duration
 
@@ -116,6 +69,17 @@ class StimuliGeneratorClosedLoop:
         print(f"New {self.stimuli_type} stimulus added with ID: {self.stim_id}")
         self.stim_id += 1
 
+    def _send_pulse_and_write_log(self, event_type, start_end, predicted_angle, predicted_distance):
+        """Send a pulse if required for the current stimulus."""
+        if not self.current_stimulus.trigger_out_sent and self.output_device:
+            self.output_device.give_pulse()
+            self.app.setDebugText(f"Sent pulse for i={self.stim_id}, stimulus={self.current_stimulus}")
+            self.stimuli_log = self.stimuli_log.append({'TS': pd.Timestamp.now(), 'Event Type': event_type,
+                                                        'End/Start': start_end, 'Predicted Angle': predicted_angle,
+                                                        'Predicted Distance': predicted_distance,
+                                                        'Current Angle': self.renderer.current_angle,
+                                                        'Current Size': self.renderer.current_size})
+            self.current_stimulus.trigger_out_sent = True
 
     def run_stimulus(self):
         # Ensure a stimulus is set and running
@@ -123,21 +87,15 @@ class StimuliGeneratorClosedLoop:
             self.current_stimulus.move()
             # update the renderer's current angle and size
             self.renderer.reset_food(int(self.current_stimulus.current_degree), int(self.current_stimulus.currRadius))
-            # Todo see when to send the pulse
-            if not self.current_stimulus.trigger_out_sent:
-                if self.output_device is not None:
-                    self.output_device.give_pulse()
-                    self.app.setDebugText("Sent pulse for i={0}".format(self.stim_id, self.current_stimulus))
-                self.current_stimulus.trigger_out_sent = True
-        elif not self.calib_mode: # stimuli is done - need to initiate new stimuli
+        elif not self.calib_mode:  # stimuli is done - need to initiate new stimuli
             self.stop_stimulus()
-
-            if self.stimuli_type == "floating": # change to spacer
+            if self.stimuli_type == "floating":  # change to spacer
+                self._send_pulse_and_write_log("trial","end", "NA","NA")
                 self.stimuli_type = "spacer"
                 self.start_trial_from_left = not self.start_trial_from_left
                 self.current_stim_struct = copy.deepcopy(self.stimulus_struct_spacer)
-
-            elif self.stimuli_type == "moving": # change to floating from current point in the same direction
+            elif self.stimuli_type == "moving":  # change to floating from current point in the same direction
+                self._send_pulse_and_write_log("movement", "end", "NA", "NA")
                 self.stimuli_type = "floating"
                 if self.start_trial_from_left:
                     self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
@@ -145,9 +103,10 @@ class StimuliGeneratorClosedLoop:
                     self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_right)
                 self.current_stim_struct["startX"] = self.renderer.current_angle
                 self.current_stim_struct["duration"] = StimuliGeneratorClosedLoop.calc_duration(
-                    int(self.current_stim_struct["startX"]),int(self.current_stim_struct["endX"]),stimuli_floating_speed)
-
+                    int(self.current_stim_struct["startX"]), int(self.current_stim_struct["endX"]),
+                    stimuli_floating_speed)
             elif self.stimuli_type == "spacer":  # change to floating
+                self._send_pulse_and_write_log("trial", "start", "NA", "NA")
                 self.stimuli_type = "floating"
                 if self.start_trial_from_left:
                     self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
@@ -171,40 +130,30 @@ class StimuliGeneratorClosedLoop:
                 self.stop_stimulus()
                 old_angle = self.renderer.current_angle
                 old_size = self.renderer.current_size
-                res = self.renderer.calc_new_angle_and_size(angle,distance)
-                if res is None: # end of trial - the stimuli is out of range or the hunt is finished
+                res = self.renderer.calc_new_angle_and_size(angle, distance)
+                if res is None:  # end of trial - the stimuli is out of range or the hunt is finished
                     # run spacer
-                    print("trial end because hunt is finished")
                     self.stimuli_type = "spacer"
                     self.current_stimulus = Stimulus(self.stimulus_struct_spacer, self.canvas, self.app, self.stim_id)
                     self.start_trial_from_left = not self.start_trial_from_left
-                else: # update with new movement angle and distance
+                else:  # update with new movement angle and distance
                     self.stimuli_type = "moving"
-
+                    self._send_pulse_and_write_log("trial", "start", "NA", "NA")
                     new_angle, new_size = res
-                    self.modify_stimulus_dict(new_angle,new_size,old_angle,old_size)
+                    self.modify_stimulus_dict(new_angle, new_size, old_angle, old_size)
                     self.current_stimulus = Stimulus(self.current_stim_struct, self.canvas, self.app, self.stim_id)
                 self.start_stimulus()
 
-
-
-    def modify_stimulus_dict(self, new_angle, new_distance, old_angle = None, old_size = None):
+    def modify_stimulus_dict(self, new_angle, new_distance, old_angle=None, old_size=None):
         if self.calib_mode:
-            self.current_stim_struct["startX"] = self.current_stim_struct["endX"]
-            self.current_stim_struct["endX"] = str(new_angle)
-            self.current_stim_struct["startShapeRadius"] = self.current_stim_struct["endShapeRadius"]
-            self.current_stim_struct["endShapeRadius"] = str(new_distance)
-
+            self.current_stim_struct.update({"startX": self.current_stim_struct["endX"], "endX": str(new_angle),
+                                             "startShapeRadius": self.current_stim_struct["endShapeRadius"],
+                                             "endShapeRadius": str(new_distance)})
         else:
-            self.current_stim_struct["exitCriteria"] = "Time"
-            self.current_stim_struct["startX"] = old_angle
-            self.current_stim_struct["endX"] = str(new_angle)
-            self.current_stim_struct["startShapeRadius"] = old_size
-            self.current_stim_struct["endShapeRadius"] = str(new_distance)
-            duration = StimuliGeneratorClosedLoop.calc_duration(int(self.current_stim_struct["startX"]), int(self.current_stim_struct["endX"])
-                                                                , stimuli_moving_speed)
-            print(f"duration{duration}")
-            self.current_stim_struct["duration"] = duration
+            self.current_stim_struct.update({"exitCriteria": "Time", "startX": old_angle, "endX": str(new_angle),
+                                             "startShapeRadius": old_size, "endShapeRadius": str(new_distance),
+                                             "duration": self.calc_duration(int(old_angle), int(new_angle),
+                                                                            stimuli_moving_speed)})
 
 
 def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer, min_frame,
@@ -213,14 +162,15 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
     logging.info("Closed loop started")
     image_processor = ImageProcessor(False)
     image_processor.calc_masks(min_frame, mean_frame, head_origin, number_of_frames_calibration)
-    closed_loop_class = ClosedLoop(pca_and_predict, image_processor, head_origin, tail_tip, bout_recognizer,queue_predictions)
+    closed_loop_class = ClosedLoop(pca_and_predict, image_processor, head_origin, tail_tip, bout_recognizer,
+                                   queue_predictions)
     while state.value == 1:
         if not queue_writer.empty():
             i, image_result = queue_writer.get(timeout=1)  # Fetch from the queue
             closed_loop_class.process_frame(image_result)  # Process the frame
         else:
             pass
-            #logging.warning("Queue is empty, no image to process.")
+            # logging.warning("Queue is empty, no image to process.")
     closed_loop_class.process_frame(None)
     # Clean-up logic for closed-loop background when state is not RUN
     logging.info("Closed loop background finished")

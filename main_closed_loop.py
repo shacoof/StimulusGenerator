@@ -163,11 +163,11 @@ class ClosedLoop:
 
         time.sleep(1)
         if self.current_frame % 2 ==0:
-            angle = 20
-            distance = 0.5
+            angle = 10
+            distance = 2
         else:
-            angle = -20
-            distance = 0.5
+            angle = -10
+            distance = 2
         print(f"angle {angle} distance {distance}")
         self.multiprocess_prediction_queue.put((angle, distance))
         self.current_frame += 1
