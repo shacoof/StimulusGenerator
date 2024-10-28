@@ -4,10 +4,49 @@ import numpy as np
 import os
 import time
 import multiprocessing
-from image_processor.tail_tracker import standalone_tail_tracking_func
 from image_processor.stytra_tail_tracking import get_tail_angles, reproduce_tail_from_angles
 from PIL import Image
 import matplotlib.pyplot as plt
+
+def plot_worker(plot_queue):
+    """
+    Worker function that listens to the plot_queue and handles the plotting
+    of tail traces to avoid delays in the main process.
+    """
+    while True:
+        plot_data = plot_queue.get()
+        if plot_data is None:  # Termination signal
+            break
+
+        start_point, angles, image, seg_length, is_bout, bout_index = plot_data
+        tail_points = reproduce_tail_from_angles(start_point, angles, seg_length)
+
+        # Extract x and y points for plotting
+        tail_x, tail_y = zip(*tail_points)
+
+        # Clear the current figure
+        plt.clf()
+
+        # Create subplot (or get existing one if already created)
+        ax = plt.gca()
+
+        # Plot the image
+        ax.imshow(image, cmap='gray', vmin=0, vmax=255)
+        ax.plot(tail_x, tail_y, 'red', marker='o', markersize=1, label="Tail Trace")
+        ax.scatter(start_point[0], start_point[1], color='red', label="Start Point")
+
+        # Update the title based on the is_bout flag
+        if is_bout:
+            ax.set_title(f"Bout Detected frame {bout_index}", color='red')
+        else:
+            ax.set_title("Reproduced Tail from Angles")
+
+        ax.axis('off')
+
+        # Update the plot
+        plt.draw()
+        plt.pause(0.01)  # Pause briefly to ensure the plot window updates
+
 
 def worker_target(bout_frames_queue, tail_data_queue, head_origin, tail_tip):
     """Worker method that processes matrices from the input queue."""
@@ -49,6 +88,10 @@ class ClosedLoop:
         self.num_workers = num_workers
         if use_multi_processing:
             self.start_workers()
+        self.plot_queue = multiprocessing.Queue()  # Queue for the plot worker
+        self.plot_process = multiprocessing.Process(target=plot_worker, args=(self.plot_queue,))
+        if debug_mode:
+            self.plot_process.start()
 
     def start_workers(self):
         """Starts worker processes."""
@@ -80,68 +123,18 @@ class ClosedLoop:
                 processed_count += 1
         return bout_frames
 
-    import matplotlib.pyplot as plt
-    import numpy as np
 
     def debug_plot(self, start_point, angles, image, seg_length):
         """
-        Reproduce the tail trace from given angles, starting point, and segment length.
-
-        Parameters
-        ----------
-        start_point : tuple
-            Starting point of the tail (x, y).
-        angles : list or numpy array
-            List of angles for each tail segment.
-        image : numpy array
-            The image on which the tail is being traced.
-        seg_length : float
-            The length of each tail segment.
-
-        Returns
-        -------
-        tail_points : list of tuples
-            List of (x, y) points representing the tail segments.
+        Prepare the data for plotting and send it to the plot queue.
         """
         is_bout = self.is_bout  # Check if a bout is detected
-        angles = -angles[::-1]
-        x, y = start_point
-        tail_points = [(x, y)]
+        self.plot_queue.put((start_point, angles, image, seg_length, is_bout, self.bout_index))
 
-        # Compute the tail trace points
-        for angle in angles:
-            dx = seg_length * np.sin(angle)
-            dy = seg_length * np.cos(angle)
-            x += dx
-            y += dy
-            tail_points.append((x, y))
-
-        # Extract x and y points for plotting
-        tail_x, tail_y = zip(*tail_points)
-
-        # Clear the current figure
-        plt.clf()
-
-        # Create subplot (or get existing one if already created)
-        ax = plt.gca()
-
-        # Plot the image
-        ax.imshow(image, cmap='gray', vmin=0, vmax=255)
-        ax.plot(tail_x, tail_y, 'red', marker='o', markersize=1, label="Tail Trace")
-        ax.scatter(start_point[0], start_point[1], color='red', label="Start Point")
-
-        # Update the title based on the is_bout flag
-        if is_bout:
-            ax.set_title(f"Bout Detected frame {self.bout_index}", color='red')
-        else:
-            ax.set_title("Reproduced Tail from Angles")
-
-        ax.axis('off')
-
-        # Update the plot
-        plt.draw()
-        plt.pause(0.01)  # Pause briefly to ensure the plot window updates
-        return tail_points
+    def stop_plotting(self):
+        """Terminate the plot worker."""
+        self.plot_queue.put(None)  # Signal the plot worker to terminate
+        self.plot_process.join()
 
     def process_frame(self, frame):
         # time_now = time.time()
@@ -159,6 +152,8 @@ class ClosedLoop:
         # self.current_frame += 1
 
         if frame is None:
+            if debug_mode:
+                self.stop_plotting()
             return
 
         self.current_frame += 1
