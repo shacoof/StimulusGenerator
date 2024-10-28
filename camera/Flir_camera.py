@@ -42,7 +42,26 @@ class SpinnakerCamera:
         Set camera settings such as frame rate, exposure time, and gain.
         """
         if frame_rate:
-            self.camera.AcquisitionFrameRate.SetValue(frame_rate)
+
+            nodemap = self.camera.GetNodeMap()  # Access the camera's nodemap
+
+            if frame_rate:
+                # Disable frame rate auto if it exists
+                node_frame_rate_auto = PySpin.CEnumerationPtr(nodemap.GetNode('AcquisitionFrameRateAuto'))
+                if PySpin.IsAvailable(node_frame_rate_auto) and PySpin.IsWritable(node_frame_rate_auto):
+                    node_frame_rate_auto_off = node_frame_rate_auto.GetEntryByName('Off')
+                    if PySpin.IsAvailable(node_frame_rate_auto_off) and PySpin.IsReadable(node_frame_rate_auto_off):
+                        node_frame_rate_auto.SetIntValue(node_frame_rate_auto_off.GetValue())
+                        print("Frame rate auto set to: Off")
+
+                # Set the frame rate
+                node_acquisition_framerate = PySpin.CFloatPtr(nodemap.GetNode('AcquisitionFrameRate'))
+                if PySpin.IsAvailable(node_acquisition_framerate) and PySpin.IsWritable(node_acquisition_framerate):
+                    node_acquisition_framerate.SetValue(frame_rate)
+                    print(f"Frame rate set to: {frame_rate} fps")
+                else:
+                    print("Frame rate is not writable or not available.")
+
         if exposure_time:
             self.camera.ExposureAuto.SetValue(PySpin.ExposureAuto_Off)
             self.camera.ExposureTime.SetValue(exposure_time)

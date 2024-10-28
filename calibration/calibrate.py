@@ -149,14 +149,14 @@ class Calibrator:
         first_img_arr = self.first_image
         current_min = first_img_arr[self.focal_lim_y[0]:self.focal_lim_y[1], self.focal_lim_x[0]:self.focal_lim_x[1]]
         current_sum = first_img_arr
-        start_angle_of_stimuli = 15
-        end_angle_of_stimuli = 165
+        start_angle_of_stimuli = start_angle
+        end_angle_of_stimuli = end_angle
         is_start = True
         for i in tqdm(range(self.num_frames)):
             if i % 100 == 0:
                 if stimuli_queue:
                     angle = start_angle_of_stimuli if is_start else end_angle_of_stimuli
-                    stimuli_queue.put((angle, 4))
+                    stimuli_queue.put((angle, 0))
                     is_start = not is_start
             img_arr = self.load_image()
             current_min = np.minimum(current_min, img_arr[self.focal_lim_y[0]:self.focal_lim_y[1],

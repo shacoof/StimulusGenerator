@@ -126,7 +126,7 @@ class App:
         calibrating_thread = threading.Thread(target=self.start_calibrating,args=(stimuli_queue,), daemon=True)
         calibrating_thread.start()
         self.sg = StimuliGeneratorClosedLoop(self.canvas, self, stimuli_queue,
-                                             self.stimulus_output_device, self.queue_reader)
+                                             self.stimulus_output_device, self.queue_reader, calib_mode=True)
         self.runStimuliClosedLoop()
         while self.state == constants.RUN:
             self.canvas.update()  # This keeps the UI responsive during the loop

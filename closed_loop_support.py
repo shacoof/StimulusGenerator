@@ -5,17 +5,18 @@ from image_processor.ImageProcessor import ImageProcessor
 from main_closed_loop import ClosedLoop
 from Stimulus import Stimulus
 from constants import *
-
+import copy
 
 class StimuliGeneratorClosedLoop:
-    def __init__(self, canvas, app, closed_loop_pred_queue, output_device=None, camera_queue=None):
-        self.start_trial_from_left = True
-        duration = StimuliGeneratorClosedLoop.calc_duration(start_angle, end_angle, stimuli_floating_speed)
-        self.stimulus_struct = {
+    def __init__(self, canvas, app, closed_loop_pred_queue, output_device=None, camera_queue=None, calib_mode = False):
+        self.start_trial_from_left = False
+        self.calib_mode = calib_mode
+        float_duration = StimuliGeneratorClosedLoop.calc_duration(start_angle, end_angle, stimuli_floating_speed)
+        self.basic_stimulus_struct = {
             "exitCriteria": "Time",
-            "startX": '90',
+            "startX": str(start_angle),
             "startY": '450',
-            "endX": '90',
+            "endX": '30',
             "endY": '450',
             "repetitions": '1',
             "fastSpeed": '0',
@@ -26,7 +27,7 @@ class StimuliGeneratorClosedLoop:
             "slowDuration": '100',
             "startMode": "AFTER",
             "delay": '0',
-            "duration": '0',  # ms
+            "duration": '100',  # ms
             "xType": "degrees"
         }
         self.stimulus_struct_start_left = {
@@ -44,7 +45,7 @@ class StimuliGeneratorClosedLoop:
             "slowDuration": '100',
             "startMode": "AFTER",
             "delay": '0',
-            "duration": duration,  # ms
+            "duration": float_duration,  # ms
             "xType": "degrees"
         }
         self.stimulus_struct_start_right = {
@@ -62,7 +63,7 @@ class StimuliGeneratorClosedLoop:
             "slowDuration": '100',
             "startMode": "AFTER",
             "delay": '0',
-            "duration": duration,  # ms
+            "duration": float_duration,  # ms
             "xType": "degrees"
         }
         self.stimulus_struct_spacer = {
@@ -83,20 +84,26 @@ class StimuliGeneratorClosedLoop:
             "duration": '5000',  # ms
             "xType": "degrees"
         }
+        self.current_stim_struct = None
         self.camera_queue = camera_queue
         self.closed_loop_pred_queue = closed_loop_pred_queue
         self.output_device = output_device
         self.batchNo = 0
         self.canvas = canvas
         self.app = app
-        self.current_stimulus = Stimulus(self.stimulus_struct_start_left, canvas, app, 0)
-        self.renderer = Renderer(self.stimulus_struct["startX"], self.stimulus_struct["startShapeRadius"])
+        if calib_mode:
+            self.current_stim_struct = copy.deepcopy(self.basic_stimulus_struct)
+        else:
+            self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
+        self.current_stimulus = Stimulus(self.current_stim_struct, canvas, app, 0)
+        self.renderer = Renderer(int(self.current_stim_struct["startX"]), int(self.current_stim_struct["startShapeRadius"]))
         self.stim_id = 1
         self.stimuli_type = "floating"
 
     @staticmethod
     def calc_duration(start_angle, end_angle, angular_velocity):
-        duration = str(round((end_angle - start_angle) / angular_velocity * 1000))
+        print(f"angle start {start_angle} angle end {end_angle}")
+        duration = str(round(abs(end_angle - start_angle) / angular_velocity * 1000))
         return duration
 
     def stop_stimulus(self):
@@ -106,7 +113,7 @@ class StimuliGeneratorClosedLoop:
 
     def start_stimulus(self):
         self.current_stimulus.init_shape(0)
-        print(f"New stimulus added with ID: {self.stim_id}")
+        print(f"New {self.stimuli_type} stimulus added with ID: {self.stim_id}")
         self.stim_id += 1
 
 
@@ -115,76 +122,89 @@ class StimuliGeneratorClosedLoop:
         if self.current_stimulus and self.current_stimulus.status == RUNNING:
             self.current_stimulus.move()
             # update the renderer's current angle and size
-            self.renderer.reset_food(self.current_stimulus.current_degree, self.current_stimulus.currRadius)
+            self.renderer.reset_food(int(self.current_stimulus.current_degree), int(self.current_stimulus.currRadius))
             # Todo see when to send the pulse
             if not self.current_stimulus.trigger_out_sent:
                 if self.output_device is not None:
                     self.output_device.give_pulse()
                     self.app.setDebugText("Sent pulse for i={0}".format(self.stim_id, self.current_stimulus))
                 self.current_stimulus.trigger_out_sent = True
-        else: # stimuli is done - need to initiate new stimuli
+        elif not self.calib_mode: # stimuli is done - need to initiate new stimuli
             self.stop_stimulus()
 
             if self.stimuli_type == "floating": # change to spacer
-                print("trial end because floating ended")
                 self.stimuli_type = "spacer"
                 self.start_trial_from_left = not self.start_trial_from_left
-                stimulus_struct = self.stimulus_struct_spacer
+                self.current_stim_struct = copy.deepcopy(self.stimulus_struct_spacer)
 
-            if self.stimuli_type == "moving": # change to floating from current point in the same direction
+            elif self.stimuli_type == "moving": # change to floating from current point in the same direction
                 self.stimuli_type = "floating"
                 if self.start_trial_from_left:
-                    stimulus_struct = self.stimulus_struct_start_left
+                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
                 else:
-                    stimulus_struct = self.stimulus_struct_start_right
-                stimulus_struct["startX"] = self.renderer.current_angle
-                stimulus_struct["duration"] = StimuliGeneratorClosedLoop.calc_duration(
-                    int(stimulus_struct["startX"]),int(stimulus_struct["endX"]),stimuli_floating_speed)
+                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_right)
+                self.current_stim_struct["startX"] = self.renderer.current_angle
+                self.current_stim_struct["duration"] = StimuliGeneratorClosedLoop.calc_duration(
+                    int(self.current_stim_struct["startX"]),int(self.current_stim_struct["endX"]),stimuli_floating_speed)
 
-            if self.stimuli_type == "spacer":  # change to floating
+            elif self.stimuli_type == "spacer":  # change to floating
                 self.stimuli_type = "floating"
                 if self.start_trial_from_left:
-                    stimulus_struct = self.stimulus_struct_start_left
+                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
                 else:
-                    stimulus_struct = self.stimulus_struct_start_right
-            self.current_stimulus = Stimulus(stimulus_struct, self.canvas, self.app, self.stim_id)
+                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_right)
+            self.current_stimulus = Stimulus(self.current_stim_struct, self.canvas, self.app, self.stim_id)
             self.start_stimulus()
-
 
     def run_stimuli_closed_loop(self):
         self.run_stimulus()
-        try:
-            # Check if there is a new stimulus from the queue
-            if not self.closed_loop_pred_queue.empty():
-                angle, distance = self.closed_loop_pred_queue.get()
-                if self.stimuli_type != "spacer":
-                    self.stop_stimulus()
-                    res = self.renderer.calc_new_angle_and_size(angle,distance)
-                    if res is None: # end of trial - the stimuli is out of range or the hunt is finished
-                        # run spacer
-                        print("trial end because hunt is finished")
-                        self.stimuli_type = "spacer"
-                        self.current_stimulus = Stimulus(self.stimulus_struct_spacer, self.canvas, self.app, self.stim_id)
-                        self.start_trial_from_left = not self.start_trial_from_left
-                    else: # update with new movement angle and distance
-                        self.stimuli_type = "moving"
-                        new_angle, new_size = res
-                        self.modify_stimulus_dict(new_angle,new_size)
-                        self.current_stimulus = Stimulus(self.stimulus_struct, self.canvas, self.app, self.stim_id)
-                    self.start_stimulus()
-        except Exception as e:
-            print(f"Error processing queue: {e}")
+        # Check if there is a new stimulus from the queue
+        if not self.closed_loop_pred_queue.empty():
+            angle, distance = self.closed_loop_pred_queue.get()
+            if self.calib_mode:
+                self.modify_stimulus_dict(angle, 4)
+                self.stop_stimulus()
+                self.current_stimulus = Stimulus(self.current_stim_struct, self.canvas, self.app, self.stim_id)
+                self.start_stimulus()
+
+            elif self.stimuli_type != "spacer":
+                self.stop_stimulus()
+                old_angle = self.renderer.current_angle
+                old_size = self.renderer.current_size
+                res = self.renderer.calc_new_angle_and_size(angle,distance)
+                if res is None: # end of trial - the stimuli is out of range or the hunt is finished
+                    # run spacer
+                    print("trial end because hunt is finished")
+                    self.stimuli_type = "spacer"
+                    self.current_stimulus = Stimulus(self.stimulus_struct_spacer, self.canvas, self.app, self.stim_id)
+                    self.start_trial_from_left = not self.start_trial_from_left
+                else: # update with new movement angle and distance
+                    self.stimuli_type = "moving"
+
+                    new_angle, new_size = res
+                    self.modify_stimulus_dict(new_angle,new_size,old_angle,old_size)
+                    self.current_stimulus = Stimulus(self.current_stim_struct, self.canvas, self.app, self.stim_id)
+                self.start_stimulus()
 
 
-    def modify_stimulus_dict(self, angle, distance):
-        self.stimulus_struct["exitCriteria"] = "Time"
-        self.stimulus_struct["startX"] = self.renderer.current_angle
-        self.stimulus_struct["endX"] = str(angle)
-        self.stimulus_struct["startShapeRadius"] = self.stimulus_struct["endShapeRadius"]
-        self.stimulus_struct["endShapeRadius"] = str(distance)
-        duration = StimuliGeneratorClosedLoop.calc_duration(int(self.stimulus_struct["startX"]), int(self.stimulus_struct["endX"])
-                                                            , stimuli_moving_speed)
-        self.stimulus_struct["duration"] = duration
+
+    def modify_stimulus_dict(self, new_angle, new_distance, old_angle = None, old_size = None):
+        if self.calib_mode:
+            self.current_stim_struct["startX"] = self.current_stim_struct["endX"]
+            self.current_stim_struct["endX"] = str(new_angle)
+            self.current_stim_struct["startShapeRadius"] = self.current_stim_struct["endShapeRadius"]
+            self.current_stim_struct["endShapeRadius"] = str(new_distance)
+
+        else:
+            self.current_stim_struct["exitCriteria"] = "Time"
+            self.current_stim_struct["startX"] = old_angle
+            self.current_stim_struct["endX"] = str(new_angle)
+            self.current_stim_struct["startShapeRadius"] = old_size
+            self.current_stim_struct["endShapeRadius"] = str(new_distance)
+            duration = StimuliGeneratorClosedLoop.calc_duration(int(self.current_stim_struct["startX"]), int(self.current_stim_struct["endX"])
+                                                                , stimuli_moving_speed)
+            print(f"duration{duration}")
+            self.current_stim_struct["duration"] = duration
 
 
 def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer, min_frame,
