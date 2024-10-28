@@ -134,11 +134,12 @@ class StimuliGeneratorClosedLoop:
                 if res is None:  # end of trial - the stimuli is out of range or the hunt is finished
                     # run spacer
                     self.stimuli_type = "spacer"
+                    self._send_pulse_and_write_log("trial", "end", str(angle), str(distance))
                     self.current_stimulus = Stimulus(self.stimulus_struct_spacer, self.canvas, self.app, self.stim_id)
                     self.start_trial_from_left = not self.start_trial_from_left
                 else:  # update with new movement angle and distance
                     self.stimuli_type = "moving"
-                    self._send_pulse_and_write_log("trial", "start", "NA", "NA")
+                    self._send_pulse_and_write_log("moving", "start", str(angle), str(distance))
                     new_angle, new_size = res
                     self.modify_stimulus_dict(new_angle, new_size, old_angle, old_size)
                     self.current_stimulus = Stimulus(self.current_stim_struct, self.canvas, self.app, self.stim_id)

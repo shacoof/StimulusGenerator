@@ -1,8 +1,6 @@
 debug_bout_detector = False
 debug_tail = False
 debug_PCA = False
-use_camera = True
-use_stytra_tracking = True
 start_angle = 30 # The entire screen spans 15 - 165 degrees
 end_angle = 150
 stimuli_moving_speed = 50 # degree per sec

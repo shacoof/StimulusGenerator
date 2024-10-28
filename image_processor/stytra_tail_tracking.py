@@ -2,7 +2,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter1d
 import matplotlib.pyplot as plt
 
-def get_tail_angles(im, tail_start, tail_end, n_segments = 25, tail_filter_width = 5, n_output_segments = 98
+def get_tail_angles(im, tail_start, tail_end, n_segments = 25, tail_filter_width = 0, n_output_segments = 98
                     , window_size = 10):
     """Finds the tail for an embedded fish, given the starting point and
     the direction of the tail. Alternative to the sequential circular arches.
@@ -44,10 +44,10 @@ def get_tail_angles(im, tail_start, tail_end, n_segments = 25, tail_filter_width
     # Initial displacements in x and y:
     disp_x = tail_length_x / n_segments
     disp_y = tail_length_y / n_segments
-
+    first_angle = np.arctan2(disp_x, disp_y)
     angles = np.full(n_segments - 1, np.nan)
-    points = np.zeros((n_segments - 1 ,2))
-
+    points = np.zeros((n_segments - 1, 2))
+    points[0, :] = start_x, start_y
     halfwin = window_size / 2
     for i in range(1, n_segments):
         # Use next segment function for find next point
@@ -60,16 +60,16 @@ def get_tail_angles(im, tail_start, tail_end, n_segments = 25, tail_filter_width
             break
 
         abs_angle = np.arctan2(disp_x, disp_y)
-        points[i-1,:] = start_x + disp_x, start_y + disp_y
+        points[i - 1, :] = start_x + disp_x, start_y + disp_y
         angles[i - 1] = abs_angle
 
     # we want angles to be continuous, this removes potential 2pi discontinuities
     angles = np.unwrap(angles)
-
     # we do not need to record a large amount of angles
     if tail_filter_width > 0:
         angles = gaussian_filter1d(angles, tail_filter_width, mode="nearest")
 
+    # angles[:4] = np.clip(angles[:4], -0.1, 0.1)
     # Generate the x-values for the original data points
     x_original = np.linspace(0, 1, n_segments - 1)
     # Step 1: Perform a degree-7 polynomial fit
@@ -84,8 +84,9 @@ def get_tail_angles(im, tail_start, tail_end, n_segments = 25, tail_filter_width
         np.linspace(0, 1, n_segments - 1),  # Old points (from original angles)
         angles_smooth  # Polynomial-smoothed angles
     )
+    new_seg_length = length_tail / n_output_segments
     points = np.round(points[::-1])
-    return -angles_interpolated[::-1], points
+    return -angles_interpolated[::-1], points, new_seg_length
 
 
 def _next_segment(fc, xm, ym, dx, dy, halfwin, next_point_dist):
@@ -162,7 +163,7 @@ def _next_segment(fc, xm, ym, dx, dy, halfwin, next_point_dist):
     return xm + dx, ym + dy, dx, dy, acc
 
 
-def reproduce_tail_from_angles(start_point, angles, image, seg_length):
+def reproduce_tail_from_angles(start_point, angles, seg_length):
     """
     Reproduce the tail trace from given angles, starting point, and segment length.
 
@@ -172,8 +173,6 @@ def reproduce_tail_from_angles(start_point, angles, image, seg_length):
         Starting point of the tail (x, y).
     angles : list or numpy array
         List of angles for each tail segment.
-    image : numpy array
-        The image on which the tail is being traced.
     seg_length : float
         The length of each tail segment.
 
@@ -182,7 +181,7 @@ def reproduce_tail_from_angles(start_point, angles, image, seg_length):
     tail_points : list of tuples
         List of (x, y) points representing the tail segments.
     """
-
+    angles = -angles[::-1]
     # Initialize the starting point
     x, y = start_point
     tail_points = [(x, y)]
@@ -199,29 +198,5 @@ def reproduce_tail_from_angles(start_point, angles, image, seg_length):
 
         # Append the new point to the list
         tail_points.append((x, y))
-
-
-    # Extract x and y points for plotting
-    tail_x, tail_y = zip(*tail_points)
-
-    # Clear the current axes
-    plt.clf()
-
-    # Create subplot (or get existing one if already created)
-    ax = plt.gca()
-
-    # Plot the image
-    ax.imshow(image, cmap='gray', vmin=0, vmax=255)
-
-    ax.plot(tail_x, tail_y, 'yellow', marker='o', markersize=5, label="Tail Trace")
-    ax.scatter(start_point[0], start_point[1], color='red', label="Start Point")
-
-    # Add the frame number as the title
-    ax.set_title("Reproduced Tail from Angles")
-    ax.axis('off')
-
-    # Update the plot
-    plt.draw()
-    plt.pause(0.1)  # Pause briefly to ensure the plot window updates
 
     return tail_points

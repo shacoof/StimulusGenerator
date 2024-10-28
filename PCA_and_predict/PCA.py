@@ -3,7 +3,7 @@ from scipy.linalg import svd
 import matplotlib.pyplot as plt
 import scipy.io
 
-from closed_loop_config import use_stytra_tracking, fr_500
+from closed_loop_config import fr_500
 
 
 class PCA:
@@ -91,7 +91,7 @@ class PCA:
         return theta_matrix
 
     def reduce_dimensionality_and_predict(self, tail_data_theta_mat: np.array, to_plot, frame_number = "",
-                                          use_stytra_tracking=use_stytra_tracking, fr_500 = fr_500) -> np.array:
+                                          use_stytra_tracking=True, fr_500 = fr_500) -> np.array:
         """
         receives numpy array tail data with dimensions 35x98 where 35 is the number of frames, 98 are tail angles or
         receives numpy array tail data with dimensions 30x105x2 where 35 is the number of frames, 105 are the

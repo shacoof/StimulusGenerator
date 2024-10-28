@@ -176,7 +176,7 @@ class Calibrator:
             img_arr = self.load_image()
             if self.calculate_PCA:
                 binary_image, subtracted_img = self.image_processor.preprocess_binary()
-                tail_angles, points = get_tail_angles(subtracted_img, self.head_origin, self.tail_tip)
+                tail_angles, points, seg_length = get_tail_angles(subtracted_img, self.head_origin, self.tail_tip)
                 tail_data[i, :] = tail_angles
         return tail_data
 
