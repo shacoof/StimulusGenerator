@@ -44,10 +44,8 @@ class PCA:
         self.get_svd()
         if self.plot_PC:
             # imris
-            V = scipy.io.loadmat('Z:\Lab-Shared\Data\ClosedLoop\V.mat')['V']
-            # S = scipy.io.loadmat('Z:\Lab-Shared\Data\ClosedLoop\S.mat')['S']
-            # shais
-            # V = scipy.io.loadmat("Z:\\adi.kishony\ClosedLoopPOC\saved_np_arrays\\20240916-f2_SVD.mat")['V']
+            V = scipy.io.loadmat('\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\V.mat')['V']
+            # S = scipy.io.loadmat('\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\S.mat')['S']
             PCA.plot_PCs("adis_PCs", self.V)
             PCA.plot_PCs("imris_PCs", V)
 

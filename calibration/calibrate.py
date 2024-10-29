@@ -107,12 +107,12 @@ class Calibrator:
         self._calc_mean_min_frame(stimuli_queue)
         if fr_500:
             # Shai
-            B_angle = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['angle_solution']
-            B_distance = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['distance_solution']
+            B_angle = scipy.io.loadmat("\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['angle_solution']
+            B_distance = scipy.io.loadmat("\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")['distance_solution']
         else:
             # Imri 500/3 Hz
-            B_angle = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")['angle_solution']
-            B_distance = scipy.io.loadmat("Z:\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")['distance_solution']
+            B_angle = scipy.io.loadmat("\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")['angle_solution']
+            B_distance = scipy.io.loadmat("\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")['distance_solution']
         # Imri 500 Hz
         # B_angle = scipy.io.loadmat('Z:\Lab-Shared\Data\ClosedLoop\B_angle.mat')['angle_solution']
         # B_distance = scipy.io.loadmat('Z:\Lab-Shared\Data\ClosedLoop\B_distance.mat')['distance_solution']
@@ -134,8 +134,8 @@ class Calibrator:
             pca_and_predict.calc_3_PCA(theta_matrix)
         else:
             # imris PCs
-            V = scipy.io.loadmat('Z:\Lab-Shared\Data\ClosedLoop\V.mat')['V']
-            S = scipy.io.loadmat('Z:\Lab-Shared\Data\ClosedLoop\S.mat')['S']
+            V = scipy.io.loadmat('\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\V.mat')['V']
+            S = scipy.io.loadmat('\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\S.mat')['S']
             # shai's PCs
             # V = scipy.io.loadmat("Z:\\adi.kishony\ClosedLoopPOC\saved_np_arrays\\20240916-f2_SVD.mat")['V']
             # S = scipy.io.loadmat("Z:\\adi.kishony\ClosedLoopPOC\saved_np_arrays\\20240916-f2_SVD.mat")['S']

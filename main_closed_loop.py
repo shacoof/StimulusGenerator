@@ -240,7 +240,7 @@ if __name__ == '__main__':
     # directory settings
     start_frame = 197751
     end_frame = 198450
-    images_path = f"Z:\Lab-Shared\Data\ClosedLoop\\20231204-f2\\raw_data"
+    images_path = "\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\\20231204-f2\\raw_data"
     calibrator = Calibrator(calculate_PCA=False, live_camera=False,
                             plot_bout_detector=False,start_frame=start_frame,
                             end_frame=start_frame + 500,
