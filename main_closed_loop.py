@@ -41,8 +41,9 @@ def plot_worker(shared_data, lock):
 
         # Calculate tail points
         x, y = start_point
+        angles = -angles[::-1]
         tail_points = [(x, y)]
-        for angle in -angles[::-1]:
+        for angle in angles:
             dx = seg_length * np.sin(angle)
             dy = seg_length * np.cos(angle)
             x += dx
