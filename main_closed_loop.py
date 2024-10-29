@@ -8,7 +8,7 @@ from image_processor.stytra_tail_tracking import get_tail_angles, reproduce_tail
 from PIL import Image
 import matplotlib.pyplot as plt
 
-def plot_worker(queue):
+def plot_worker(shared_data, lock):
     """
     Worker function that listens to the plot_queue and handles the plotting
     of tail traces to avoid delays in the main process.
@@ -20,11 +20,18 @@ def plot_worker(queue):
     ax.axis('off')
 
     while True:
-        item = queue.get()
-        if item is None:
+        # Read the shared values within the lock
+        start_point = shared_data["start_point"]
+        angles = shared_data["angles"]
+        image = shared_data["image"]
+        seg_length = shared_data["seg_length"]
+        is_bout = shared_data["is_bout"]
+        bout_index = shared_data["bout_index"]
+
+        # Check if termination condition
+        if start_point is None:
             break
 
-        start_point, angles, image, seg_length, is_bout, bout_index = item
 
         # Update image plot (only if needed)
         if img_plot is None:
@@ -82,7 +89,6 @@ class ClosedLoop:
         self.bout_recognizer = bout_recognizer
         self.is_bout = False
         self.bout_index = 0
-        self.frame_num = 0
         self.bout_frames = np.zeros((frames_from_bout, 98))
         self.current_frame = 0
         self.multiprocess_prediction_queue = multiprocess_prediction_queue
@@ -96,8 +102,16 @@ class ClosedLoop:
         self.num_workers = num_workers
         if use_multi_processing:
             self.start_workers()
-        self.plot_queue = multiprocessing.Queue()  # Queue for the plot worker
-        self.plot_process = multiprocessing.Process(target=plot_worker, args=(self.plot_queue,))
+        self.shared_data = multiprocessing.Manager().dict()
+        self.lock = multiprocessing.Lock()
+        self.plot_process = multiprocessing.Process(target=plot_worker, args=(self.shared_data, self.lock))
+        self.shared_data["start_point"] = (0, 0)
+        self.shared_data["angles"] = np.array([])
+        self.shared_data["image"] = np.zeros((100, 100))
+        self.shared_data["seg_length"] = 1.0
+        self.shared_data["is_bout"] = False
+        self.shared_data["bout_index"] = 0
+
         if debug_mode:
             self.plot_process.start()
 
@@ -131,21 +145,26 @@ class ClosedLoop:
                 processed_count += 1
         return bout_frames
 
-
-    def debug_plot(self, start_point, angles, image, seg_length):
+    def update_shared_data(self, start_point, angles, image, seg_length):
         """
         Prepare the data for plotting and send it to the plot queue.
         """
-        print("Queue size:", self.plot_queue.qsize())
-        self.plot_queue.put((start_point, angles, image, seg_length,  self.is_bout, self.bout_index))
+        self.shared_data['start_point'] = start_point
+        self.shared_data['angles'] = angles
+        self.shared_data['image'] = image
+        self.shared_data['seg_length'] = seg_length
+        self.shared_data['is_bout'] = self.is_bout
+        self.shared_data['bout_index'] = self.bout_index
+
+
 
     def stop_plotting(self):
         """Terminate the plot worker."""
-        self.plot_queue.put(None)
+        with self.lock:
+            self.shared_data["start_point"] = None
         self.plot_process.join()
 
     def process_frame(self, frame):
-        self.frame_num += 1
         # time_now = time.time()
         # self.bout_start_time = time_now
         #
@@ -170,8 +189,8 @@ class ClosedLoop:
         self.bout_recognizer.update(self.image_processor.get_image_matrix())
         binary_image, subtracted = self.image_processor.preprocess_binary()
         tail_angles, points, seg_length = get_tail_angles(subtracted, self.head_origin, self.tail_tip)
-        if debug_mode and self.frame_num % 13 == 0:
-            self.debug_plot(self.head_origin, tail_angles, subtracted, seg_length)
+        if self.current_frame % 14 == 0:
+            self.update_shared_data(self.head_origin, tail_angles, subtracted, seg_length)
 
         # if this is a bout frame
         if self.is_bout:
