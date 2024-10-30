@@ -138,7 +138,7 @@ class ClosedLoop:
         while processed_count < self.num_bout_frames:
             # Check if the output queue is at capacity
             if self.tail_data_queue.qsize() == self.num_bout_frames:
-                print(f"Output queue is full with {self.num_bout_frames} matrices.")
+                print(f"Acquired {self.num_bout_frames} matrices.")
             # Get and store the results in the list by their original index
             if not self.tail_data_queue.empty():
                 bout_index, tail_data = self.tail_data_queue.get()
