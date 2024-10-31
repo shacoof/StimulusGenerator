@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 class Calibrator:
     def __init__(self, live_camera = True, images_path = None,
-                start_frame = 0, end_frame = 1000, calib_frame_ranges = None):
+                start_frame = 0, end_frame = number_of_frames_calibration, calib_frame_ranges = None):
         """
         Args:
             live_camera: use live camera - in this case the FLIR camera needs to be connected
