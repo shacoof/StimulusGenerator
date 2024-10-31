@@ -69,6 +69,7 @@ class SpinnakerCamera:
             self.camera.GainAuto.SetValue(PySpin.GainAuto_Off)
             self.camera.Gain.SetValue(gain)
 
+
     def get_frame(self):
         """
         Capture a single frame and return it as a NumPy array.
@@ -88,6 +89,7 @@ class SpinnakerCamera:
         self.camera.EndAcquisition()
 
         return np_image
+
 
     def get_frames(self, num_frames, frame_rate):
         """
@@ -120,6 +122,7 @@ class SpinnakerCamera:
 
         self.camera.EndAcquisition()
         return frames
+
 
     def close(self):
         """

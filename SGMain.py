@@ -4,7 +4,7 @@
 from tkinter import Canvas, mainloop, Tk, BOTH
 
 import constants
-from utils import loadCSV, writeCSV, sendF9Marker
+from utils.utils import loadCSV, writeCSV, sendF9Marker
 import logging
 from math import trunc
 import sys

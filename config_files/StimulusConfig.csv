@@ -1,0 +1,8 @@
+exitCriteria,startX,startY,endX,endY,repetitions,fastSpeed,slowSpeed,startShapeRadius,endShapeRadius,fastDuration,slowDuration,startMode,delay,duration,xType
+Time,30,600,150,600,1,0,0,4,4,500,500,After,0,400,degrees
+Spacer,0,0,0,0,1,0,0,4,4,100,100,After,0,500,degrees
+Time,150,600,30,600,1,0,0,4,4,500,500,After,0,400,degrees
+Spacer,0,0,0,0,1,0,0,4,4,100,100,After,0,500,degrees
+Time,30,600,150,600,1,0,0,4,4,500,500,After,0,400,degrees
+Spacer,0,0,0,0,1,0,0,4,4,100,100,After,0,500,degrees
+Time,150,600,30,600,1,0,0,4,4,500,500,After,0,400,degrees

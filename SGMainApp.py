@@ -1,25 +1,21 @@
 from tkinter.ttk import tkinter
+import queue
 import threading
-from closed_loop_support import StimuliGeneratorClosedLoop, start_closed_loop_background
-import time
+from closed_loop_process.closed_loop_support import StimuliGeneratorClosedLoop, start_closed_loop_background
 import shutil
 import datetime
 from tkinter import Canvas, Tk, BOTH
 from tkinter import ttk
 import nidaqmx
 from screeninfo import get_monitors
-import utils
-from NiDaqPulse import NiDaqPulse
+from NiDaq.NiDaqPulse import NiDaqPulse
 from math import pi, cos
 import sys
-from StimuliGenerator import *
+from Stimulus.StimuliGenerator import *
 import multiprocessing
-from utils import writeCSV
-from StimuliGenerator import StimulusGenerator
-from closed_loop_config import *
-from calibration.calibrate import Calibrator
-import image_reader_worker
-import image_writer_worker
+from utils.utils import *
+from closed_loop_process.calibration.calibrate import Calibrator
+from camera import image_reader_worker, image_writer_worker
 import constants
 
 # TODO save all config files in a separate directory and allow using a specific config file by name (select screen)
@@ -36,12 +32,10 @@ class App:
         self.pca_and_predict = None
         self.image_processor = None
         self.bout_recognizer = None
-        self.head_origin = None
-        self.tail_tip = None
+        self.tail_tracker = None
         self.calibrator = calibrator
         self.screen = screen
         self.state = None
-        self.calibration_complete_event = threading.Event()
         self.multiprocess_state_is_running = multiprocessing.Value('b', False)  # Initial value is False
         self.stimulus_output_device = None
         self.port = 1
@@ -121,7 +115,6 @@ class App:
         self.printHelp("")
 
     def calibrate(self):
-        import queue
         stimuli_queue = queue.Queue()
         calibrating_thread = threading.Thread(target=self.start_calibrating,args=(stimuli_queue,), daemon=True)
         calibrating_thread.start()
@@ -136,9 +129,8 @@ class App:
     def start_calibrating(self, stimuli_queue):
         # Calibration process running in its own thread
         [self.pca_and_predict, self.image_processor, self.bout_recognizer,
-        self.head_origin, self.tail_tip] = self.calibrator.start_calibrating(stimuli_queue)
+        self.tail_tracker] = self.calibrator.start_calibrating(stimuli_queue)
         self.state = constants.PAUSE
-
 
     def init_f9_communication(self):
         if self.f9CommunicationEnabled.lower() == "on":
@@ -195,11 +187,11 @@ class App:
         fish_name = input(f"Enter fish name: ")
         self.file_prefix = f"{timestamp}_{fish_name}"
         self.data_path = f"{self.data_path}\\{self.file_prefix}"
-        while fish_name == '' or not utils.create_directory(f"{self.data_path}"):
+        while fish_name == '' or not create_directory(f"{self.data_path}"):
             fish_name = input(f"Fish name must be unique and not empty: ")
             self.file_prefix = f"{timestamp}_{fish_name}"
             self.data_path = f"{self.data_path}\\{self.file_prefix}"
-        shutil.copyfile(constants.STIMULUS_CONFIG, f"{self.data_path}\\{constants.STIMULUS_CONFIG}")
+        shutil.copyfile(constants.STIMULUS_CONFIG, f"{self.data_path}\\StimulusConfig.csv")
         self.queue_reader = multiprocessing.Queue()  # communication queue to the worker
         self.queue_writer = multiprocessing.Queue()  # communication queue to the worker
         if self.closed_loop.lower() == "on":
@@ -329,7 +321,7 @@ class App:
 
             if self.closed_loop.lower() == "on":
                 # save preprocess_config.py
-                with open("preprocess_config.py", 'r') as source_file:
+                with open("config_files/preprocess_config.py", 'r') as source_file:
                     content = source_file.read()
                 with open(self.data_path + "/preprocess_config.txt", 'w') as target_file:
                     target_file.write(content)
@@ -338,8 +330,7 @@ class App:
                 self.closed_loop_process = multiprocessing.Process(
                     target=start_closed_loop_background,
                     args=(self.images_queue, self.multiprocess_state_is_running, self.pca_and_predict,self.bout_recognizer,
-                          self.image_processor.min_frame, self.image_processor.mean_frame,
-                          self.head_origin, self.tail_tip, self.queue_closed_loop_prediction))
+                          self.tail_tracker, self.image_processor, self.queue_closed_loop_prediction))
 
                 self.closed_loop_process.start()  # Start the process in the background
                 self.sg = StimuliGeneratorClosedLoop(self.canvas, self, self.queue_closed_loop_prediction, self.stimulus_output_device, self.queue_reader)
@@ -568,14 +559,10 @@ if __name__ == '__main__':
         raise RuntimeError("can't run closed loop without camera - edit the appConfig file")
     calibrator = None
     if closed_loop.lower() == "on":
-        calibrator = Calibrator(calculate_PCA=False, live_camera=True,
-                                plot_bout_detector=debug_bout_detector,
-                                end_frame=number_of_frames_calibration,
-                                debug_PCA=debug_PCA)
-
+        calibrator = Calibrator(live_camera=True)
     root = Tk()
     root.title("Shacoof fish Stimuli Generator ")
-    utils.dark_title_bar(root)
+    dark_title_bar(root)
     app = App(root,calibrator)
     root.mainloop()
     sys.exit()

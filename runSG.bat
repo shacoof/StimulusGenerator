@@ -1,3 +1,3 @@
-C:\Users\owner\Documents\Code\StimulusGenerator\venv\Scripts\python .\SGMainApp.py
+C:\Users\adi.kishony\anaconda3\envs\opencv_contrib_for_behavior\python .\SGMainApp.py
 exit
 exit
