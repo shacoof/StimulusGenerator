@@ -63,7 +63,7 @@ class ClosedLoop:
         self.current_frame = 0
         self.multiprocess_prediction_queue = multiprocess_prediction_queue
         self.bout_start_time = 0
-
+        self.frame_time = time.time()
         self.shared_data = multiprocessing.Manager().dict()
         self.lock = multiprocessing.Lock()
         self.plot_process = multiprocessing.Process(target=plot_worker, args=(self.shared_data, self.lock))
@@ -106,14 +106,15 @@ class ClosedLoop:
         # print(f"angle {angle} distance {distance}")
         # self.multiprocess_prediction_queue.put((angle, distance))
         # self.current_frame += 1
+        #
+        # print(time.time() - self.frame_time)
+        # self.frame_time = time.time()
 
         if frame is None:
             if debug_mode:
                 self.stop_plotting()
             return
-
         self.current_frame += 1
-
         tail_angles, tail_points = self.tail_tracker.tail_tracking(frame)
         if self.current_frame % 14 == 0:
             self.update_shared_data(tail_points, frame)

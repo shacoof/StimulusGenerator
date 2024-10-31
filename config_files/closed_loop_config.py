@@ -7,7 +7,7 @@ stimuli_moving_speed = 50 # degree per sec
 spacer_duration = 6000 # ms
 stimuli_floating_speed = 2 # degree per sec
 number_of_frames_calibration = 1000
-use_stytra_tracking = False
+use_stytra_tracking = True
 plot_bout_detector = False
 fr_500 = False # program only supports frame rate 500 or 166
 if fr_500:
