@@ -1,7 +1,7 @@
 import logging
 import time
 from os import times
-
+from multiprocessing import queues
 from angle_dist_translater.AngleDistTranslator import AngleDistTranslator
 from closed_loop_process.print_time import reset_time, print_time, print_statistics, start_time_logger
 from config_files.closed_loop_config import *
@@ -188,7 +188,11 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
             print(f"Warning: images queue size is of size {images_queue_size}")
 
         print_time('before queue')
-        i, image_result = queue_writer.get()  # Fetch from the queue
+        try:
+            i, image_result = queue_writer.get_nowait()   # Attempt to get an item without waiting
+        except queues.Empty:
+            print("Queue is empty, no item to retrieve.")
+            continue
         print_time('after queue')
         closed_loop_class.process_frame(image_result)  # Process the frame
         print_time('after process')

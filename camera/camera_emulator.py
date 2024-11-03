@@ -5,7 +5,7 @@ import time
 
 from closed_loop_process.print_time import print_statistics, start_time_logger, reset_time, print_time
 
-frame_time = 0.009
+frame_time = 0.010
 
 def camera_emulator_function(queue_reader, queue_writer, images_queue):
     start_frame = 197751
@@ -35,8 +35,8 @@ def camera_emulator_function(queue_reader, queue_writer, images_queue):
         print('EMULATOR: Frame time: ', total_time, flush=True)
         index = i % number_of_frames
         image = all_frame_mats[index]
-        queue_writer.put((i, image))
-        images_queue.put((i, image))
+        queue_writer.put_nowait((i, image))
+        images_queue.put_nowait((i, image))
 
         next_time = init_time + (i + 1) * frame_time
         delay = next_time - time.perf_counter()

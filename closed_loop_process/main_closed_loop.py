@@ -7,6 +7,7 @@ import time
 import multiprocessing
 from PIL import Image
 import matplotlib.pyplot as plt
+import psutil
 
 def plot_worker(shared_data, lock):
     """
@@ -90,6 +91,8 @@ class ClosedLoop:
         self.frame_index = 0
         if debug_mode:
             self.plot_process.start()
+            process5_psutil = psutil.Process(self.plot_process.pid)
+            process5_psutil.cpu_affinity([5])
 
 
     def update_shared_data(self, tail_points, image):
