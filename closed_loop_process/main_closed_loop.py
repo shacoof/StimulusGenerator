@@ -116,15 +116,10 @@ class ClosedLoop:
                 self.stop_plotting()
             return
 
-        if camera_emulator_on:
-            frame = self.all_frame_mats[self.frame_index % self.number_of_frames]
-            self.number_of_frames += 1
-        self.current_frame += 1
-
         print_time('before tail_tracking')
         tail_angles, tail_points = self.tail_tracker.tail_tracking(frame)
         print_time('after tail_tracking')
-        if self.current_frame % 14 == 0 and debug_mode:
+        if self.current_frame % 10 == 0 and debug_mode:
             self.update_shared_data(tail_points, frame)
 
         self.bout_recognizer.update(frame)

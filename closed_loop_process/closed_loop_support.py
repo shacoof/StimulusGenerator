@@ -149,7 +149,10 @@ class StimuliGeneratorClosedLoop:
                 self.start_stimulus()
 
     def modify_stimulus_dict(self, new_angle, new_distance, old_angle=None, old_size=None):
+        new_angle = round(new_angle)
+        new_distance = round(new_distance)
         if self.calib_mode:
+
             self.current_stim_struct.update({"startX": self.current_stim_struct["endX"], "endX": str(new_angle),
                                              "startShapeRadius": self.current_stim_struct["endShapeRadius"],
                                              "endShapeRadius": str(new_distance)})
@@ -175,12 +178,8 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
     p.nice(psutil.HIGH_PRIORITY_CLASS)
     closed_loop_class = ClosedLoop(pca_and_predict, image_processor, tail_tracker, bout_recognizer,
                                    queue_predictions)
-    image_num = -1
     start_time_logger('CLOSED LOOP')
     while state.value == 1:
-        image_num += 1
-        if image_num > 170:
-            break
         reset_time()
         print('after reset')
         images_queue_size = queue_writer.qsize()
@@ -194,10 +193,7 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
         closed_loop_class.process_frame(image_result)  # Process the frame
         print_time('after process')
 
-            # logging.warning("Queue is empty, no image to process.")
-
     print_statistics()
-
     closed_loop_class.process_frame(None)
     # Clean-up logic for closed-loop background when state is not RUN
     logging.info("Closed loop background finished")
