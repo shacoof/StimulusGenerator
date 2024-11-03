@@ -1,4 +1,5 @@
 from closed_loop_process.calibration.calibrate import Calibrator
+from closed_loop_process.print_time import print_time
 from config_files.closed_loop_config import *
 import numpy as np
 import os
@@ -115,10 +116,14 @@ class ClosedLoop:
                 self.stop_plotting()
             return
         self.current_frame += 1
+        print_time('before tail_tracking')
         tail_angles, tail_points = self.tail_tracker.tail_tracking(frame)
-        if self.current_frame % 14 == 0:
+        print_time('after tail_tracking')
+        if self.current_frame % 14 == 0 and debug_mode:
             self.update_shared_data(tail_points, frame)
 
+        self.bout_recognizer.update(frame)
+        print_time('after bout_recognizer')
         # if this is a bout frame
         if self.is_bout:
             self.bout_index += 1
@@ -134,6 +139,7 @@ class ClosedLoop:
                     f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
         else:
             verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
+            print_time('after is_start_of_bout')
             if verdict:
                 self.bout_start_time = time.time()
                 self.bout_index = 0

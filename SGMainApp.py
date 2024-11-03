@@ -13,10 +13,14 @@ from math import pi, cos
 import sys
 from Stimulus.StimuliGenerator import *
 import multiprocessing
+
+from config_files.closed_loop_config import camera_emulator_on
 from utils.utils import *
 from closed_loop_process.calibration.calibrate import Calibrator
 from camera import image_reader_worker, image_writer_worker
 import constants
+import psutil
+from camera.camera_emulator import camera_emulator_function
 
 # TODO save all config files in a separate directory and allow using a specific config file by name (select screen)
 # TODO allow re-run with a new file prefix
@@ -196,11 +200,19 @@ class App:
         self.queue_writer = multiprocessing.Queue()  # communication queue to the worker
         if self.closed_loop.lower() == "on":
             self.images_queue = multiprocessing.Queue()  # images to read in closed loop image processing
-        self.camera = multiprocessing.Process(name='camera_control_worker',  # Creation of the worker
-                                              target=image_reader_worker.camera_control_worker,
-                                              args=(
-                                                  self.queue_reader, self.queue_writer, self.data_path,
-                                                  self.file_prefix, self.images_queue))
+        if camera_emulator_on:
+            self.camera = multiprocessing.Process(name='camera_control_worker',  # Creation of the worker
+                                                  target=camera_emulator_function,
+                                                  args=(self.queue_reader,
+                                                        self.queue_writer,
+                                                        self.images_queue))
+        else:
+            self.camera = multiprocessing.Process(name='camera_control_worker',  # Creation of the worker
+                                                  target=image_reader_worker.camera_control_worker,
+                                                  args=(
+                                                      self.queue_reader, self.queue_writer, self.data_path,
+                                                      self.file_prefix, self.images_queue))
+
         self.writer_process1 = multiprocessing.Process(name='image_writer_worker1',
                                                        target=image_writer_worker.image_writer_worker,
                                                        args=(self.queue_writer, self.data_path, self.image_file_type))
@@ -318,6 +330,13 @@ class App:
                 self.camera.start()
                 self.writer_process1.start()
                 self.writer_process2.start()
+                process1_psutil = psutil.Process(self.camera.pid)
+                process2_psutil = psutil.Process(self.writer_process1.pid)
+                process3_psutil = psutil.Process(self.writer_process2.pid)
+                process1_psutil.cpu_affinity([0])
+                process2_psutil.cpu_affinity([1])
+                process3_psutil.cpu_affinity([2])
+
 
             if self.closed_loop.lower() == "on":
                 # save preprocess_config.py
@@ -333,6 +352,8 @@ class App:
                           self.tail_tracker, self.image_processor, self.queue_closed_loop_prediction))
 
                 self.closed_loop_process.start()  # Start the process in the background
+                process4_psutil = psutil.Process(self.closed_loop_process.pid)
+                process4_psutil.cpu_affinity([3])
                 self.sg = StimuliGeneratorClosedLoop(self.canvas, self, self.queue_closed_loop_prediction, self.stimulus_output_device, self.queue_reader)
                 self.runStimuliClosedLoop()
             else:
@@ -559,7 +580,14 @@ if __name__ == '__main__':
         raise RuntimeError("can't run closed loop without camera - edit the appConfig file")
     calibrator = None
     if closed_loop.lower() == "on":
-        calibrator = Calibrator(live_camera=True)
+        if camera_emulator_on:
+            calibrator = Calibrator(live_camera=False,
+                                    start_frame=197751,
+                                    end_frame=197751 + 500,
+                                    images_path = "\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\\20231204-f2\\raw_data"
+            )
+        else:
+            calibrator = Calibrator(live_camera=True)
     root = Tk()
     root.title("Shacoof fish Stimuli Generator ")
     dark_title_bar(root)

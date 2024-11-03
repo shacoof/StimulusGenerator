@@ -1,5 +1,9 @@
 import logging
+import time
+from os import times
+
 from angle_dist_translater.AngleDistTranslator import AngleDistTranslator
+from closed_loop_process.print_time import reset_time, print_time, print_statistics, start_time_logger
 from config_files.closed_loop_config import *
 from closed_loop_process.main_closed_loop import ClosedLoop
 from Stimulus.Stimulus import Stimulus
@@ -154,20 +158,46 @@ class StimuliGeneratorClosedLoop:
                                              "startShapeRadius": old_size, "endShapeRadius": str(new_distance),
                                              "duration": self.calc_duration(int(old_angle), int(new_angle),
                                                                             stimuli_moving_speed)})
+def empty_queue(queue):
+    while not queue.empty():
+        try:
+            queue.get_nowait()  # Non-blocking get
+        except Exception as e:
+            break
 
 
 def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer,tail_tracker,image_processor, queue_predictions):
+    import psutil
     # Target function for real-time image processing
     logging.info("Closed loop started")
+    empty_queue(queue_writer)
+    p = psutil.Process()  # Get current process
+    p.nice(psutil.HIGH_PRIORITY_CLASS)
     closed_loop_class = ClosedLoop(pca_and_predict, image_processor, tail_tracker, bout_recognizer,
                                    queue_predictions)
+    image_num = -1
+    start_time_logger('CLOSED LOOP')
     while state.value == 1:
-        if not queue_writer.empty():
-            i, image_result = queue_writer.get(timeout=1)  # Fetch from the queue
-            closed_loop_class.process_frame(image_result)  # Process the frame
-        else:
-            pass
+        image_num += 1
+        if image_num > 170:
+            break
+        reset_time()
+        print('after reset')
+        images_queue_size = queue_writer.qsize()
+        print(images_queue_size)
+        if images_queue_size > 1:
+            print(f"Warning: images queue size is of size {images_queue_size}")
+
+        print_time('before queue')
+        i, image_result = queue_writer.get()  # Fetch from the queue
+        print_time('after queue')
+        closed_loop_class.process_frame(image_result)  # Process the frame
+        print_time('after process')
+
             # logging.warning("Queue is empty, no image to process.")
+
+    print_statistics()
+
     closed_loop_class.process_frame(None)
     # Clean-up logic for closed-loop background when state is not RUN
     logging.info("Closed loop background finished")
