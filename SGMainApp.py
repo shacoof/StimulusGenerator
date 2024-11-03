@@ -200,19 +200,12 @@ class App:
         self.queue_writer = multiprocessing.Queue()  # communication queue to the worker
         if self.closed_loop.lower() == "on":
             self.images_queue = multiprocessing.Queue()  # images to read in closed loop image processing
-        if camera_emulator_on:
-            self.camera = multiprocessing.Process(name='camera_control_worker',  # Creation of the worker
-                                                  target=camera_emulator_function,
-                                                  args=(self.queue_reader,
-                                                        self.queue_writer,
-                                                        self.images_queue))
-        else:
-            self.camera = multiprocessing.Process(name='camera_control_worker',  # Creation of the worker
-                                                  target=image_reader_worker.camera_control_worker,
-                                                  args=(
-                                                      self.queue_reader, self.queue_writer, self.data_path,
-                                                      self.file_prefix, self.images_queue))
 
+        self.camera = multiprocessing.Process(name='camera_control_worker',  # Creation of the worker
+                                              target=image_reader_worker.camera_control_worker,
+                                              args=(
+                                                  self.queue_reader, self.queue_writer, self.data_path,
+                                                  self.file_prefix, self.images_queue))
         self.writer_process1 = multiprocessing.Process(name='image_writer_worker1',
                                                        target=image_writer_worker.image_writer_worker,
                                                        args=(self.queue_writer, self.data_path, self.image_file_type))

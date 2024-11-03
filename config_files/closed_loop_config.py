@@ -1,6 +1,6 @@
 debug_bout_detector = False
 debug_PCA = False
-debug_mode = False
+debug_mode = True
 camera_emulator_on = True
 start_angle = 30 # The entire screen spans 15 - 165 degrees
 end_angle = 150

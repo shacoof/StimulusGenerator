@@ -72,6 +72,22 @@ class ClosedLoop:
         self.shared_data["image"] = np.zeros((100, 100))
         self.shared_data["is_bout"] = False
         self.shared_data["bout_index"] = 0
+        start_frame = 197751
+        end_frame = 198450
+        self.all_frame_mats = []
+        images_path = "\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\\20231204-f2\\raw_data"
+        for i in range(start_frame, end_frame + 1):
+            # Format the image filename based on the numbering pattern
+            img_filename = f"img{str(i).zfill(12)}.jpg"
+            img_path = os.path.join(images_path, img_filename)
+            try:
+                with Image.open(img_path) as img:
+                    image_matrix = np.array(img)
+                    self.all_frame_mats.append(image_matrix)
+            except Exception as e:
+                print(f"Error loading image: {e}")
+        self.number_of_frames = len(self.all_frame_mats)
+        self.frame_index = 0
         if debug_mode:
             self.plot_process.start()
 
@@ -94,28 +110,17 @@ class ClosedLoop:
         self.plot_process.join()
 
     def process_frame(self, frame):
-        # time_now = time.time()
-        # self.bout_start_time = time_now
-        #
-        # time.sleep(10)
-        # if self.current_frame % 2 == 0:
-        #     angle = -20
-        #     distance = 0.5
-        # else:
-        #     angle = 20
-        #     distance = 0.5
-        # print(f"angle {angle} distance {distance}")
-        # self.multiprocess_prediction_queue.put((angle, distance))
-        # self.current_frame += 1
-        #
-        # print(time.time() - self.frame_time)
-        # self.frame_time = time.time()
 
         if frame is None:
             if debug_mode:
                 self.stop_plotting()
             return
+
+        if camera_emulator_on:
+            frame = self.all_frame_mats[self.frame_index % self.number_of_frames]
+            self.number_of_frames += 1
         self.current_frame += 1
+
         print_time('before tail_tracking')
         tail_angles, tail_points = self.tail_tracker.tail_tracking(frame)
         print_time('after tail_tracking')
