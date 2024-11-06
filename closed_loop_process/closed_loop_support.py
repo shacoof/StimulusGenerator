@@ -189,7 +189,7 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
 
         print_time('before queue')
         try:
-            i, image_result = queue_writer.get_nowait()   # Attempt to get an item without waiting
+            i, image_result = queue_writer.get()   # Attempt to get an item without waiting
             print(f"time to image frame = {time.perf_counter() - prev_time}")
             prev_time= time.perf_counter()
         except queues.Empty:

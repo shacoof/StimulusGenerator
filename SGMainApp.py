@@ -14,7 +14,7 @@ import sys
 from Stimulus.StimuliGenerator import *
 import multiprocessing
 
-from config_files.closed_loop_config import camera_emulator_on
+from config_files.closed_loop_config import camera_emulator_on, emulator_with_camera
 from utils.utils import *
 from closed_loop_process.calibration.calibrate import Calibrator
 from camera import image_reader_worker, image_writer_worker
@@ -579,7 +579,7 @@ if __name__ == '__main__':
         raise RuntimeError("can't run closed loop without camera - edit the appConfig file")
     calibrator = None
     if closed_loop.lower() == "on":
-        if camera_emulator_on:
+        if camera_emulator_on or emulator_with_camera:
             calibrator = Calibrator(live_camera=False,
                                     start_frame=197751,
                                     end_frame=197751 + 500,
