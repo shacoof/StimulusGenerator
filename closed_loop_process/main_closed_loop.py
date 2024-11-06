@@ -118,6 +118,9 @@ class ClosedLoop:
             if debug_mode:
                 self.stop_plotting()
             return
+        if emulator_with_camera:
+            frame = self.all_frame_mats[self.frame_index%len(self.all_frame_mats)]
+            self.frame_index += 1
 
         print_time('before tail_tracking')
         tail_angles, tail_points = self.tail_tracker.tail_tracking(frame)
