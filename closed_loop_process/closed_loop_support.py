@@ -171,14 +171,14 @@ def empty_queue(queue):
 
 def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer,tail_tracker,image_processor, queue_predictions):
     import psutil
-    # Target function for real-time image processing
-    logging.info("Closed loop started")
-    empty_queue(queue_writer)
     p = psutil.Process()  # Get current process
     p.nice(psutil.HIGH_PRIORITY_CLASS)
     closed_loop_class = ClosedLoop(pca_and_predict, image_processor, tail_tracker, bout_recognizer,
                                    queue_predictions)
+    print("Closed loop started")
+    empty_queue(queue_writer)
     start_time_logger('CLOSED LOOP')
+    prev_time = time.perf_counter()
     while state.value == 1:
         reset_time()
         print('after reset')
@@ -190,6 +190,8 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
         print_time('before queue')
         try:
             i, image_result = queue_writer.get_nowait()   # Attempt to get an item without waiting
+            print(f"time to image frame = {time.perf_counter() - prev_time}")
+            prev_time= time.perf_counter()
         except queues.Empty:
             print("Queue is empty, no item to retrieve.")
             continue
