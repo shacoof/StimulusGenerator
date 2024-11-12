@@ -94,6 +94,7 @@ class App:
 
         # Init camera
         if self.camera_control.lower() == "on":
+            self.get_fish_name()
             self.setup_camera()
 
         # Init f9communication
@@ -181,12 +182,8 @@ class App:
         self.closed_loop = self.getAppConfig("use_closed_loop", "str")
         self.split_rate = self.getAppConfig("split_rate")
 
-    def setup_camera(self):
-        """
-            setup the camera, this requires
-                getting the fish name
-                creating the workers and the queues
-            """
+
+    def get_fish_name(self):
         # get experiment prefix for file names etc.
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         fish_name = input(f"Enter fish name: ")
@@ -197,6 +194,11 @@ class App:
             self.file_prefix = f"{timestamp}_{fish_name}"
             self.data_path = f"{self.data_path}\\{self.file_prefix}"
         shutil.copyfile(constants.STIMULUS_CONFIG, f"{self.data_path}\\StimulusConfig.csv")
+
+    def setup_camera(self):
+        """
+            setup the camera - creating the workers and the queues
+            """
         self.queue_reader = multiprocessing.Queue()  # communication queue to the worker
         self.queue_writer = multiprocessing.Queue()  # communication queue to the worker
         if self.closed_loop.lower() == "on":
@@ -236,24 +238,9 @@ class App:
     def leaveProg(self, event):
         logging.debug(event)
         logging.info("Bye bye !")
-        self.multiprocess_state_is_running.value = False
-        self.sg.terminate_run()
-        self.sg.save_csv(self.data_path)
         if self.stimulus_output_device is not None:
             self.stimulus_output_device.stop()
-        if self.camera:
-            self.queue_reader.put('exit')
-            self.camera.join()
-            self.camera.terminate()
-        if self.writer_process1:
-            self.writer_process1.join()
-            self.writer_process1.terminate()
-        if self.writer_process2:
-            self.writer_process2.join()
-            self.writer_process2.terminate()
-        if self.closed_loop_process:
-            self.closed_loop_process.join()
-            self.closed_loop_process.terminate()
+        self.stop_processes()
         self.screen.quit()
         sys.exit()
 
@@ -268,12 +255,12 @@ class App:
         print(constants.LOCATION, ' - switch to virtual screen location setting')
         print(constants.SIZE, ' - switch to virtual screen size setting ')
         print('<Up> - move up or reduce virtual screen height')
-        print('<Down> - move down or extend virtual screen hegith')
+        print('<Down> - move down or extend virtual screen height')
         print('<Left>  - move left or reduce virtual screen width')
         print('<Right> - move right or extend virtual screen size ')
         print(constants.UPDATE, ' - to update app config with current virtual screen location')
         print("========== Controlling Stimulus generator ==========")
-        print(constants.RUN, ' - Run the stimuli, pressing r again will restart')
+        print(constants.RUN, ' - Run the stimuli')
         print(constants.PAUSE, ' - Pause the run')
 
     def changeControlMode(self, event):
@@ -300,37 +287,47 @@ class App:
                 self.createCross()
         return
 
+    def stop_processes(self):
+        self.multiprocess_state_is_running.value = False
+        self.state = constants.PAUSE
+        if self.sg != "":
+            self.sg.terminate_run()
+        if self.camera:
+            self.queue_reader.put('exit')
+            self.camera.join(timeout=1)
+            self.camera.terminate()
+        if self.writer_process1:
+            self.writer_process1.join(timeout=1)
+            self.writer_process1.terminate()
+        if self.writer_process2:
+            self.writer_process2.join(timeout=1)
+            self.writer_process2.terminate()
+        if self.closed_loop_process:
+            self.closed_loop_process.join(timeout=1)
+            self.closed_loop_process.terminate()
+
+    def setup_closed_loop_process(self):
+        # Start the closed-loop process
+        self.queue_closed_loop_prediction = multiprocessing.Queue()  # communication queue to the worker
+        self.closed_loop_process = multiprocessing.Process(
+            target=start_closed_loop_background,
+            args=(self.images_queue, self.multiprocess_state_is_running, self.pca_and_predict, self.bout_recognizer,
+                  self.tail_tracker, self.image_processor, self.queue_closed_loop_prediction))
+
 
     def manageStimulus(self, event):
         logging.debug(event)
         if event.keysym == constants.PAUSE:
-            self.state = constants.PAUSE
-            if self.sg != "":
-                self.sg.terminate_run()
-            if self.camera:
-                self.queue_reader.put('exit')
-                print('EXIT SENT ')
-                self.camera.join()
-                self.camera.terminate()
-                self.camera = None
-            if self.writer_process1:
-                self.writer_process1.join()
-                self.writer_process1.terminate()
-            if self.writer_process2:
-                self.writer_process2.join()
-                self.writer_process2.terminate()
-            if self.closed_loop_process:
-                self.closed_loop_process.join()
-                self.closed_loop_process.terminate()  # Terminate the closed-loop process
-
-        elif event.keysym == constants.RUN:
+            self.stop_processes()
+        elif event.keysym == constants.RUN and self.state != constants.RUN:
             if self.closed_loop.lower() == "on":
                 self.state = constants.RUN
                 self.calibrate()
             self.run_start_time = time.time()
             self.state = constants.RUN
             self.multiprocess_state_is_running.value = True
-            if self.camera:
+            if self.camera_control.lower() == "on":
+                self.setup_camera()
                 self.camera.start()
                 self.writer_process1.start()
                 self.writer_process2.start()
@@ -348,13 +345,7 @@ class App:
                     content = source_file.read()
                 with open(self.data_path + "/preprocess_config.txt", 'w') as target_file:
                     target_file.write(content)
-                # Start the closed-loop process
-                self.queue_closed_loop_prediction = multiprocessing.Queue()  # communication queue to the worker
-                self.closed_loop_process = multiprocessing.Process(
-                    target=start_closed_loop_background,
-                    args=(self.images_queue, self.multiprocess_state_is_running, self.pca_and_predict,self.bout_recognizer,
-                          self.tail_tracker, self.image_processor, self.queue_closed_loop_prediction))
-
+                self.setup_closed_loop_process()
                 self.closed_loop_process.start()  # Start the process in the background
                 process4_psutil = psutil.Process(self.closed_loop_process.pid)
                 process4_psutil.cpu_affinity([3])
@@ -376,12 +367,8 @@ class App:
         if self.sg.run_stimuli() == constants.DONE:  # call specific stimuli list
             logging.info("All stimuli were executed ! ")
             self.setDebugText("Done")
-            self.state = constants.PAUSE
 
             if self.camera:
-                self.writer_process1.join()
-                self.writer_process2.join()
-                self.camera = None  # to allow re-run
                 # if we got here than all other processes are done (due to join) and we have a message waiting for us
                 i, image_result = self.queue_writer.get()
                 width = image_result[0]
@@ -405,7 +392,7 @@ class App:
                 f.write(
                     f"opencv_create_video('{file_prefix}', {height}, {width}, '{self.data_path}', '{self.image_file_type}')\n")
                 f.close()
-
+                self.leaveProg("stimulus end")
                 # opencv_create_video(file_prefix, height, width, self.data_path, self.image_file_type)
         else:
             """We will need that only if we want to split files as they get too big
@@ -413,6 +400,7 @@ class App:
                 self.run_start_time = time.time()
                 print(f"we need to split")"""
             self.canvas.after(constants.SLEEP_TIME, self.runStimuli)
+
 
     def calcGeometry(self, screen_width, screen_height):
         geometryStr = str(screen_width) + "x" + str(screen_height) + "+-10+0"

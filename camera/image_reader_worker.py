@@ -351,6 +351,7 @@ def acquire_images(cam, nodemap):
                 else:
                     if queue_reader.qsize() > 0:
                         msg = queue_reader.get()
+                        print(msg)
                         if msg == 'exit':
                             # one for each writer, we have 2, the third is for main to use to create the movie
                             # the tupple (w,h,file_prefix) is used by the main
@@ -385,7 +386,6 @@ def acquire_images(cam, nodemap):
         msg = f"{i} images taken in {delta} sec , frames per sec {i / delta}"
         print(msg)
         image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), 0, msg])
-        utils.array_to_csv(f'{data_path}\\{file_prefix}_log.csv', image_array)
         # End acquisition
         cam.EndAcquisition()
 

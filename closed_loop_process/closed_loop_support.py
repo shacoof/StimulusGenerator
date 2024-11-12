@@ -101,7 +101,7 @@ class StimuliGeneratorClosedLoop:
             self.current_stimulus.move()
             # update the angle_dist_translater's current angle and size
             self.renderer.reset_food(int(self.current_stimulus.current_degree), int(self.current_stimulus.currRadius))
-        elif not self.calib_mode:  # stimuli is done - need to initiate new stimuli
+        elif not self.calib_mode:  # stimuli are done - need to initiate new stimuli
             self.stop_stimulus()
             if self.stimuli_type == "floating":  # change to spacer
                 self._send_pulse_and_write_log("trial","end", "NA","NA")
@@ -153,7 +153,7 @@ class StimuliGeneratorClosedLoop:
                     self.start_trial_from_left = not self.start_trial_from_left
                 else:  # update with new movement angle and distance
                     self.stimuli_type = "moving"
-                    self._send_pulse_and_write_log("moving", "start", str(angle), str(distance))
+                    self._send_pulse_and_write_log("movement", "start", str(angle), str(distance))
                     new_angle, new_size = res
                     self.modify_stimulus_dict(new_angle, new_size, old_angle, old_size)
                     self.current_stimulus = Stimulus(self.current_stim_struct, self.canvas, self.app, self.stim_id)
@@ -200,7 +200,7 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
 
         print_time('before queue')
         try:
-            i, image_result = queue_writer.get()   # Attempt to get an item without waiting
+            i, image_result = queue_writer.get()
             print(f"time to image frame = {time.perf_counter() - prev_time}")
             prev_time= time.perf_counter()
         except queues.Empty:
@@ -212,5 +212,4 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
 
     print_statistics()
     closed_loop_class.process_frame(None)
-    # Clean-up logic for closed-loop background when state is not RUN
     logging.info("Closed loop background finished")
