@@ -39,7 +39,7 @@ class StimuliGeneratorClosedLoop:
         self.basic_stimulus_struct = {
             "exitCriteria": "Time", "startX": str(start_angle), "startY": '450', "endX": str(start_angle), "endY": '450',
             "repetitions": '1', "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": '4', "endShapeRadius": '4',
-            "fastDuration": '100', "slowDuration": '100', "startMode": "AFTER", "delay": '0', "duration": '400',
+            "fastDuration": '100', "slowDuration": '100', "startMode": "AFTER", "delay": '0', "duration": '300',
             "xType": "degrees"
         }
         self.stimulus_struct_start_left = copy.deepcopy(self.basic_stimulus_struct)
