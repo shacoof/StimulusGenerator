@@ -105,12 +105,13 @@ class Calibrator:
 
 
     def start_calibrating(self, stimuli_queue = None):
+        self.bout_recognizer = self._init_bout_recognizer()
         self._calc_mean_min_frame(stimuli_queue)
         if fr_500:
             self.pca_and_predict = PCA500Hz()
         else:
             self.pca_and_predict = PCA166Hz()
-        self.bout_recognizer = self._init_bout_recognizer()
+
         if use_stytra_tracking:
             self.tail_tracker = StytraTailTracker(image_processor=self.image_processor,
                                                   head_origin=self.head_origin, tail_tip=self.tail_tip)
@@ -134,6 +135,10 @@ class Calibrator:
                     stimuli_queue.put((angle, 0))
                     is_start = not is_start
             img_arr = self.load_image()
+            self.bout_recognizer.update(img_arr)
+            verdict, diff = self.bout_recognizer.is_start_of_bout(i)
+            if verdict:
+                print("bout detected!!!!")
             current_min = np.minimum(current_min, img_arr[self.focal_lim_y[0]:self.focal_lim_y[1],
                                                   self.focal_lim_x[0]:self.focal_lim_x[1]])
             current_sum = np.add(current_sum, img_arr, dtype=np.uint32)
