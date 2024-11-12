@@ -293,6 +293,8 @@ class App:
         self.state = constants.PAUSE
         if self.sg != "":
             self.sg.terminate_run()
+            if self.closed_loop_process:
+                self.sg.save_csv(self.data_path)
         if self.camera:
             self.queue_reader.put('exit')
             self.camera.join(timeout=1)
