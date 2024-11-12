@@ -166,7 +166,6 @@ class StimuliGeneratorClosedLoop:
     def modify_stimulus_dict(self, new_angle, new_distance, old_angle=None, old_size=None):
         new_angle = round(new_angle)
         new_distance = round(new_distance)
-        print(self.current_stim_struct["duration"])
         if self.calib_mode:
             self.current_stim_struct.update({"startX": self.current_stim_struct["endX"], "endX": str(new_angle),
                                              "startShapeRadius": self.current_stim_struct["endShapeRadius"],
