@@ -38,6 +38,7 @@ class App:
         self.bout_recognizer = None
         self.tail_tracker = None
         self.calibrator = calibrator
+        self.already_calibrated = False
         self.screen = screen
         self.state = None
         self.multiprocess_state_is_running = multiprocessing.Value('b', False)  # Initial value is False
@@ -261,7 +262,7 @@ class App:
         print(constants.UPDATE, ' - to update app config with current virtual screen location')
         print("========== Controlling Stimulus generator ==========")
         print(constants.RUN, ' - Run the stimuli')
-        print(constants.PAUSE, ' - Pause the run')
+        print(constants.PAUSE, ' - Stop the run - press r again to restart')
 
     def changeControlMode(self, event):
         logging.debug(event)
@@ -320,9 +321,10 @@ class App:
         if event.keysym == constants.PAUSE:
             self.stop_processes()
         elif event.keysym == constants.RUN and self.state != constants.RUN:
-            if self.closed_loop.lower() == "on":
+            if self.closed_loop.lower() == "on" and not self.already_calibrated:
                 self.state = constants.RUN
                 self.calibrate()
+                self.already_calibrated = True
             self.run_start_time = time.time()
             self.state = constants.RUN
             self.multiprocess_state_is_running.value = True

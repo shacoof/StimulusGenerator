@@ -351,7 +351,6 @@ def acquire_images(cam, nodemap):
                 else:
                     if queue_reader.qsize() > 0:
                         msg = queue_reader.get()
-                        print(msg)
                         if msg == 'exit':
                             # one for each writer, we have 2, the third is for main to use to create the movie
                             # the tupple (w,h,file_prefix) is used by the main
