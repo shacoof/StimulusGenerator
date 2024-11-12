@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import cv2
 from PIL import Image, ImageDraw, ImageFont
@@ -46,6 +48,13 @@ class ImageProcessor:
             except Exception as e:
                 print(f"Error loading image: {e}")
 
+    def image_processor_start_camera(self):
+        if self.is_live_camera:
+            self.camera.start_camera()
+
+    def image_processor_stop_camera(self):
+        if self.is_live_camera:
+            self.camera.stop_camera()
 
     def get_image_matrix(self):
         """

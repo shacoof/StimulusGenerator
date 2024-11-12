@@ -130,7 +130,7 @@ class App:
         self.runStimuliClosedLoop()
         while self.state == constants.RUN:
             self.canvas.update()  # This keeps the UI responsive during the loop
-            time.sleep(0.01)  # Small sleep to avoid busy-waiting and CPU overload
+            time.sleep(0.0001)  # Small sleep to avoid busy-waiting and CPU overload
         self.sg.stop_stimulus()
 
     def start_calibrating(self, stimuli_queue):

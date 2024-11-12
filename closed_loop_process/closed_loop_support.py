@@ -20,6 +20,7 @@ class StimuliGeneratorClosedLoop:
         self.output_device = output_device
         self.canvas = canvas
         self.app = app
+        self.prev_time = time.time()
         self.batchNo = 0
         self.stim_id = 1
         self.stimuli_type = "floating"
@@ -36,9 +37,9 @@ class StimuliGeneratorClosedLoop:
     def _init_stimulus_structs(self):
         float_duration = self.calc_duration(start_angle, end_angle, stimuli_floating_speed)
         self.basic_stimulus_struct = {
-            "exitCriteria": "Time", "startX": str(start_angle), "startY": '450', "endX": '30', "endY": '450',
+            "exitCriteria": "Time", "startX": str(start_angle), "startY": '450', "endX": str(start_angle), "endY": '450',
             "repetitions": '1', "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": '4', "endShapeRadius": '4',
-            "fastDuration": '100', "slowDuration": '100', "startMode": "AFTER", "delay": '0', "duration": '100',
+            "fastDuration": '100', "slowDuration": '100', "startMode": "AFTER", "delay": '0', "duration": '400',
             "xType": "degrees"
         }
         self.stimulus_struct_start_left = copy.deepcopy(self.basic_stimulus_struct)
@@ -98,7 +99,10 @@ class StimuliGeneratorClosedLoop:
     def run_stimulus(self):
         # Ensure a stimulus is set and running
         if self.current_stimulus and self.current_stimulus.status == RUNNING:
+            cur_time = time.time()
             self.current_stimulus.move()
+            # print(f"move time = {cur_time-self.prev_time}")
+            # self.prev_time = cur_time
             # update the angle_dist_translater's current angle and size
             self.renderer.reset_food(int(self.current_stimulus.current_degree), int(self.current_stimulus.currRadius))
         elif not self.calib_mode:  # stimuli are done - need to initiate new stimuli
@@ -162,8 +166,8 @@ class StimuliGeneratorClosedLoop:
     def modify_stimulus_dict(self, new_angle, new_distance, old_angle=None, old_size=None):
         new_angle = round(new_angle)
         new_distance = round(new_distance)
+        print(self.current_stim_struct["duration"])
         if self.calib_mode:
-
             self.current_stim_struct.update({"startX": self.current_stim_struct["endX"], "endX": str(new_angle),
                                              "startShapeRadius": self.current_stim_struct["endShapeRadius"],
                                              "endShapeRadius": str(new_distance)})

@@ -1,3 +1,5 @@
+import time
+
 from closed_loop_process.PCA_and_predict.PCA_166_Hz import PCA166Hz
 from closed_loop_process.PCA_and_predict.PCA_500_Hz import PCA500Hz
 from closed_loop_process.tail_trackers.tail_tracker_lab import LabTailTracker
@@ -52,7 +54,7 @@ class Calibrator:
             self.camera.set_camera_settings(frame_rate=camera_frame_rate)
             self.num_frames = end_frame - start_frame
         self.image_processor = ImageProcessor(live_camera, self.camera)
-
+        self.image_processor.image_processor_start_camera()
         if live_camera == False and images_path is None:
             raise RuntimeError("enter images directory")
         if not live_camera:
@@ -126,7 +128,7 @@ class Calibrator:
         end_angle_of_stimuli = end_angle
         is_start = True
         for i in tqdm(range(self.num_frames)):
-            if i % 100 == 0:
+            if i % 830 == 0:
                 if stimuli_queue:
                     angle = start_angle_of_stimuli if is_start else end_angle_of_stimuli
                     stimuli_queue.put((angle, 0))
@@ -140,6 +142,7 @@ class Calibrator:
         self.mean_frame = current_sum / self.num_frames
         self.image_processor.calc_masks(self.min_frame,self.mean_frame,self.head_origin,
                                         number_of_frames_used_in_calib=self.num_frames)
+        self.image_processor.image_processor_stop_camera()
 
 
     def _init_bout_recognizer(self):

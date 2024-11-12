@@ -70,24 +70,18 @@ class SpinnakerCamera:
             self.camera.Gain.SetValue(gain)
 
 
-    def get_frame(self):
-        """
-        Capture a single frame and return it as a NumPy array.
-        """
+    def start_camera(self):
         self.camera.BeginAcquisition()
-        image = self.camera.GetNextImage()
 
-        # Ensure image completion
-        if image.IsIncomplete():
-            raise RuntimeError("Image incomplete with status: {}".format(image.GetImageStatus()))
-
-        # Convert image to numpy array
-        np_image = np.array(image.GetNDArray())
-
-        # Release image and stop acquisition
-        image.Release()
+    def stop_camera(self):
         self.camera.EndAcquisition()
 
+    def get_frame(self):
+        image = self.camera.GetNextImage(1000)
+        if image.IsIncomplete():
+            raise RuntimeError("Image incomplete with status: {}".format(image.GetImageStatus()))
+        np_image = np.array(image.GetNDArray())
+        image.Release()
         return np_image
 
 
