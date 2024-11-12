@@ -1,6 +1,5 @@
 import logging
 import time
-from os import times
 from multiprocessing import queues
 from angle_dist_translater.AngleDistTranslator import AngleDistTranslator
 from closed_loop_process.print_time import reset_time, print_time, print_statistics, start_time_logger
@@ -72,17 +71,29 @@ class StimuliGeneratorClosedLoop:
         print(f"New {self.stimuli_type} stimulus added with ID: {self.stim_id}")
         self.stim_id += 1
 
+    def terminate_run(self):
+        self.current_stimulus.terminate_run()
+
+    def save_csv(self, path):
+        self.stimuli_log.to_csv(path + '\stimuli_log.csv', index=False)
+
     def _send_pulse_and_write_log(self, event_type, start_end, predicted_angle, predicted_distance):
         """Send a pulse if required for the current stimulus."""
+        self.stimuli_log = self.stimuli_log.append(
+            {'TS': pd.Timestamp.now(),
+             'Event Type': event_type,
+             'End/Start': start_end,
+             'Predicted Angle': predicted_angle,
+             'Predicted Distance': predicted_distance,
+             'Current Angle': self.renderer.current_angle,
+             'Current Size': self.renderer.current_size},
+            ignore_index=True
+        )
         if not self.current_stimulus.trigger_out_sent and self.output_device:
-            self.output_device.give_pulse()
             self.app.setDebugText(f"Sent pulse for i={self.stim_id}, stimulus={self.current_stimulus}")
-            self.stimuli_log = self.stimuli_log.append({'TS': pd.Timestamp.now(), 'Event Type': event_type,
-                                                        'End/Start': start_end, 'Predicted Angle': predicted_angle,
-                                                        'Predicted Distance': predicted_distance,
-                                                        'Current Angle': self.renderer.current_angle,
-                                                        'Current Size': self.renderer.current_size})
+            self.output_device.give_pulse()
             self.current_stimulus.trigger_out_sent = True
+
 
     def run_stimulus(self):
         # Ensure a stimulus is set and running
@@ -164,7 +175,7 @@ class StimuliGeneratorClosedLoop:
 def empty_queue(queue):
     while not queue.empty():
         try:
-            queue.get_nowait()  # Non-blocking get
+            queue.get()
         except Exception as e:
             break
 

@@ -64,6 +64,7 @@ class App:
         self.calcConvertPositionToPixelsTable()  # populate the above table
         self.queue_reader = None
         self.queue_writer = None
+        self.closed_loop_process = None
         self.images_queue = None
         self.camera = None
         self.writer_process1 = None
@@ -236,6 +237,8 @@ class App:
         logging.debug(event)
         logging.info("Bye bye !")
         self.multiprocess_state_is_running.value = False
+        self.sg.terminate_run()
+        self.sg.save_csv(self.data_path)
         if self.stimulus_output_device is not None:
             self.stimulus_output_device.stop()
         if self.camera:
@@ -248,7 +251,7 @@ class App:
         if self.writer_process2:
             self.writer_process2.join()
             self.writer_process2.terminate()
-        if self.closed_loop.lower() == "on":
+        if self.closed_loop_process:
             self.closed_loop_process.join()
             self.closed_loop_process.terminate()
         self.screen.quit()
@@ -297,6 +300,7 @@ class App:
                 self.createCross()
         return
 
+
     def manageStimulus(self, event):
         logging.debug(event)
         if event.keysym == constants.PAUSE:
@@ -308,13 +312,14 @@ class App:
                 print('EXIT SENT ')
                 self.camera.join()
                 self.camera.terminate()
+                self.camera = None
             if self.writer_process1:
                 self.writer_process1.join()
                 self.writer_process1.terminate()
             if self.writer_process2:
                 self.writer_process2.join()
                 self.writer_process2.terminate()
-            if self.closed_loop.lower() == "on":
+            if self.closed_loop_process:
                 self.closed_loop_process.join()
                 self.closed_loop_process.terminate()  # Terminate the closed-loop process
 

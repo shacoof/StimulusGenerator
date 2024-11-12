@@ -23,6 +23,7 @@ class StimulusGenerator:
         for i in self.stimulusObjList:
             i.terminate_run()
 
+
     def print_stimulus_list(self):
         for i in self.stimulusObjList:
             print(vars(i))
