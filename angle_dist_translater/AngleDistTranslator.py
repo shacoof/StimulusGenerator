@@ -14,7 +14,7 @@ class AngleDistTranslator:
             angle = 90
         if angle < -90:
             angle = -90
-        self.current_angle = self.current_angle + angle
+        self.current_angle = self.current_angle - angle
         if self.current_angle > 165 or self.current_angle < 15:
             return None # end of trial
         if distance > 3:
