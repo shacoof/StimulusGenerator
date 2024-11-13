@@ -1,6 +1,8 @@
 from closed_loop_process.tail_trackers.abstract_tail_tracker import AbstractTailTracker
 import numpy as np
 
+from config_files.closed_loop_config import number_of_tail_segments
+
 
 class StytraTailTracker(AbstractTailTracker):
     def __init__(self, image_processor, head_origin, tail_tip):
@@ -16,7 +18,7 @@ class StytraTailTracker(AbstractTailTracker):
         points = self._reproduce_tail_from_angles(angles, seg_length)
         return angles, points
 
-    def _get_tail_angles(self, subtracted_image, n_segments=25, n_output_segments=98, window_size=10):
+    def _get_tail_angles(self, subtracted_image, n_segments=number_of_tail_segments, n_output_segments=98, window_size=10):
         """Finds the tail for an embedded fish, given the starting point and
         the direction of the tail. Alternative to the sequential circular arches.
 

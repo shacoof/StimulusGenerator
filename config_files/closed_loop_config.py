@@ -3,6 +3,7 @@ debug_mode = False
 plot_bout_detector = False
 emulator_with_camera = False
 camera_emulator_on = False
+number_of_tail_segments = 23
 start_angle = 30 # The entire screen spans 15 - 165 degrees
 end_angle = 150
 stimuli_moving_speed = 50 # degree per sec
