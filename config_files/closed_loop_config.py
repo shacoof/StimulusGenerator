@@ -8,7 +8,7 @@ start_angle = 30 # The entire screen spans 15 - 165 degrees
 end_angle = 150
 stimuli_moving_speed = 50 # degree per sec
 spacer_duration = 6000 # ms
-stimuli_floating_speed = 2 # degree per sec
+stimuli_floating_speed = 3 # degree per sec
 number_of_frames_calibration = 10000
 use_stytra_tracking = True
 

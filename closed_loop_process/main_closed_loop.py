@@ -25,7 +25,7 @@ def plot_worker(shared_data, lock):
             tail_points = shared_data["tail_points"]
             image = shared_data["image"]
             is_bout = shared_data["is_bout"]
-            bout_index = shared_data["bout_index"]
+            bout_index = shared_data["frame_number"]
 
         # Check if termination condition
         if is_bout is None:
@@ -39,7 +39,7 @@ def plot_worker(shared_data, lock):
         tail_line.set_data(tail_x, tail_y)
 
         # Set title
-        ax.set_title(f"Bout Detected frame {bout_index}" if is_bout else "Reproduced Tail from Angles",
+        ax.set_title(f"Bout Detected frame {bout_index}" if is_bout else f"Reproduced Tail from Angles frame {bout_index}",
                      color='red' if is_bout else 'black')
 
         # Draw efficiently with blit
@@ -72,7 +72,7 @@ class ClosedLoop:
         self.shared_data["tail_points"] = np.zeros((105, 2))
         self.shared_data["image"] = np.zeros((100, 100))
         self.shared_data["is_bout"] = False
-        self.shared_data["bout_index"] = 0
+        self.shared_data["frame_number"] = 0
         start_frame = 197751
         end_frame = 198450
         self.all_frame_mats = []
@@ -88,7 +88,6 @@ class ClosedLoop:
             except Exception as e:
                 print(f"Error loading image: {e}")
         self.number_of_frames = len(self.all_frame_mats)
-        self.frame_index = 0
         if debug_mode:
             self.plot_process.start()
             process5_psutil = psutil.Process(self.plot_process.pid)
@@ -103,7 +102,7 @@ class ClosedLoop:
             self.shared_data['tail_points'] = tail_points
             self.shared_data['image'] = image
             self.shared_data['is_bout'] = self.is_bout
-            self.shared_data['bout_index'] = self.bout_index
+            self.shared_data['frame_number'] = self.current_frame
 
 
     def stop_plotting(self):
@@ -118,15 +117,17 @@ class ClosedLoop:
             if debug_mode:
                 self.stop_plotting()
             return
+
         if emulator_with_camera:
-            frame = self.all_frame_mats[self.frame_index%len(self.all_frame_mats)]
-            self.frame_index += 1
+            frame = self.all_frame_mats[self.current_frame%len(self.all_frame_mats)]
 
         print_time('before tail_tracking')
         tail_angles, tail_points = self.tail_tracker.tail_tracking(frame)
         print_time('after tail_tracking')
+
         if self.current_frame % 10 == 0 and debug_mode:
             self.update_shared_data(tail_points, frame)
+        self.current_frame +=1
 
         self.bout_recognizer.update(frame)
         print_time('after bout_recognizer')
