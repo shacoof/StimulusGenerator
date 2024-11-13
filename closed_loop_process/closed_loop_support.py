@@ -9,6 +9,8 @@ from Stimulus.Stimulus import Stimulus
 from constants import *
 import copy
 import pandas as pd
+import datetime
+
 
 
 class StimuliGeneratorClosedLoop:
@@ -81,7 +83,7 @@ class StimuliGeneratorClosedLoop:
     def _send_pulse_and_write_log(self, event_type, start_end, predicted_angle, predicted_distance):
         """Send a pulse if required for the current stimulus."""
         self.stimuli_log = self.stimuli_log.append(
-            {'TS': pd.Timestamp.now(),
+            {'TS': datetime.datetime.now().strftime("%H:%M:%S:%f"),
              'Event Type': event_type,
              'End/Start': start_end,
              'Predicted Angle': predicted_angle,

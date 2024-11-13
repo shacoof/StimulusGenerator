@@ -30,12 +30,13 @@ import multiprocessing
 import time
 import datetime
 import utils
+from utils.utils import array_to_csv
 from config_files.closed_loop_config import *
 
 # this array of arrays is used to create a log of which frame was captured at the time of stimulus event
 # see NUM_IMAGES
 # each item is [timestamp, frame-number, stimulus-message ]
-image_array = [['timestamp', 'image no', 'stimulus']]
+image_array = [['timestamp', 'image no']]
 global queue_reader, queue_writer, writer_process, images_queue
 global file_prefix, data_path, camera_output_device
 
@@ -359,8 +360,8 @@ def acquire_images(cam, nodemap):
                             queue_writer.put((-1, (width, height, file_prefix)))
                             queue_writer.put((-1, (width, height, file_prefix)))
                             print(f"process camera_control_worker is done ")
-                        else:
-                            image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), i, msg])
+                            array_to_csv(f'{data_path}\\{file_prefix}_log.csv', image_array)
+
 
                     # note that I already acquire the image, so even if exit sent I still have 1 image in the buffer
                     queue_writer.put((i, image_result.GetNDArray()))
@@ -377,6 +378,7 @@ def acquire_images(cam, nodemap):
 
                     #  Retrieve next received image
                     image_result = cam.GetNextImage(1000)
+                    image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), i, msg])
             except PySpin.SpinnakerException as ex:
                 print('Error: %s' % ex)
                 result = False
@@ -384,7 +386,6 @@ def acquire_images(cam, nodemap):
         delta = time.time() - t1
         msg = f"{i} images taken in {delta} sec , frames per sec {i / delta}"
         print(msg)
-        image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), 0, msg])
         # End acquisition
         cam.EndAcquisition()
 
