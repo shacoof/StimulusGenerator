@@ -16,6 +16,7 @@ dependencies:
   - zlib=1.2.11
   - pip:
     - screeninfo==0.8.1
+    - psutil==5.9.0
     - nidaqmx==0.8.0
     - cycler==0.10.0
     - decorator==4.4.2
