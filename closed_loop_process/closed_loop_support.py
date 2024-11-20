@@ -196,7 +196,7 @@ def empty_queue(queue):
 
 def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer,tail_tracker,image_processor, queue_predictions):
     import psutil
-    i = 0
+    j = 0
     p = psutil.Process()  # Get current process
     p.nice(psutil.HIGH_PRIORITY_CLASS)
     closed_loop_class = ClosedLoop(pca_and_predict, image_processor, tail_tracker, bout_recognizer,
@@ -222,9 +222,10 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
             print("Queue is empty, no item to retrieve.")
             continue
         print_time('after queue')
-        if i % take_every_x_frame == 0:
+        if j % take_every_x_frame == 0:
             closed_loop_class.process_frame(image_result)  # Process the frame
             print_time('after process')
+        j += 1
 
     print_statistics()
     closed_loop_class.process_frame(None)
