@@ -13,7 +13,6 @@ from math import pi, cos
 import sys
 from Stimulus.StimuliGenerator import *
 import multiprocessing
-
 from config_files.closed_loop_config import camera_emulator_on, emulator_with_camera
 from utils.utils import *
 from closed_loop_process.calibration.calibrate import Calibrator
@@ -21,11 +20,6 @@ from camera import image_reader_worker, image_writer_worker
 import constants
 import psutil
 from camera.camera_emulator import camera_emulator_function
-
-# TODO save all config files in a separate directory and allow using a specific config file by name (select screen)
-# TODO allow re-run with a new file prefix
-# TODO allow pause, run after pause
-# TODO lose focus at the end of the run... maybe due to print?
 
 
 class App:
@@ -71,6 +65,7 @@ class App:
         self.writer_process1 = None
         self.writer_process2 = None
         self.file_prefix = None
+        self.trial_num = 0
 
         # Load App Config
         self.load_app_config()
@@ -123,20 +118,19 @@ class App:
 
     def calibrate(self):
         stimuli_queue = queue.Queue()
-        calibrating_thread = threading.Thread(target=self.start_calibrating,args=(stimuli_queue,), daemon=True)
+        calibrating_thread = threading.Thread(target=self.start_calibrating, args=(), daemon=True)
         calibrating_thread.start()
-        self.sg = StimuliGeneratorClosedLoop(self.canvas, self, stimuli_queue,
-                                             self.stimulus_output_device, self.queue_reader, calib_mode=True)
+        self.sg = StimuliGeneratorClosedLoop(self.canvas, self, calib_mode=True)
         self.runStimuliClosedLoop()
         while self.state == constants.RUN:
             self.canvas.update()  # This keeps the UI responsive during the loop
             time.sleep(0.0001)  # Small sleep to avoid busy-waiting and CPU overload
         self.sg.stop_stimulus()
 
-    def start_calibrating(self, stimuli_queue):
+    def start_calibrating(self):
         # Calibration process running in its own thread
         [self.pca_and_predict, self.image_processor, self.bout_recognizer,
-        self.tail_tracker] = self.calibrator.start_calibrating(stimuli_queue)
+         self.tail_tracker] = self.calibrator.start_calibrating()
         self.state = constants.PAUSE
 
     def init_f9_communication(self):
@@ -183,13 +177,12 @@ class App:
         self.closed_loop = self.getAppConfig("use_closed_loop", "str")
         self.split_rate = self.getAppConfig("split_rate")
 
-
     def get_fish_name(self):
         # get experiment prefix for file names etc.
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         fish_name = input(f"Enter fish name: ")
         self.file_prefix = f"{timestamp}_{fish_name}"
-        self.data_path = f"{self.data_path}\\{self.file_prefix}"
+        self.data_path = f"{self.data_path}\\{self.file_prefix}\\trial_{self.trial_num}"
         while fish_name == '' or not create_directory(f"{self.data_path}"):
             fish_name = input(f"Fish name must be unique and not empty: ")
             self.file_prefix = f"{timestamp}_{fish_name}"
@@ -199,7 +192,7 @@ class App:
     def setup_camera(self):
         """
             setup the camera - creating the workers and the queues
-            """
+        """
         self.queue_reader = multiprocessing.Queue()  # communication queue to the worker
         self.queue_writer = multiprocessing.Queue()  # communication queue to the worker
         if self.closed_loop.lower() == "on":
@@ -317,11 +310,13 @@ class App:
             args=(self.images_queue, self.multiprocess_state_is_running, self.pca_and_predict, self.bout_recognizer,
                   self.tail_tracker, self.image_processor, self.queue_closed_loop_prediction))
 
-
     def manageStimulus(self, event):
         logging.debug(event)
         if event.keysym == constants.PAUSE:
             self.stop_processes()
+            self.trial_num += 1
+            self.data_path =self.data_path[0:self.data_path.rfind("_") + 1] + str(self.trial_num)
+            create_directory(f"{self.data_path}")
         elif event.keysym == constants.RUN and self.state != constants.RUN:
             if self.closed_loop.lower() == "on" and not self.already_calibrated:
                 self.state = constants.RUN
@@ -342,7 +337,6 @@ class App:
                 process2_psutil.cpu_affinity([1])
                 process3_psutil.cpu_affinity([2])
 
-
             if self.closed_loop.lower() == "on":
                 # save preprocess_config.py
                 with open("config_files/preprocess_config.py", 'r') as source_file:
@@ -353,7 +347,8 @@ class App:
                 self.closed_loop_process.start()  # Start the process in the background
                 process4_psutil = psutil.Process(self.closed_loop_process.pid)
                 process4_psutil.cpu_affinity([3])
-                self.sg = StimuliGeneratorClosedLoop(self.canvas, self, self.queue_closed_loop_prediction, self.stimulus_output_device, self.queue_reader)
+                self.sg = StimuliGeneratorClosedLoop(self.canvas, self, self.queue_closed_loop_prediction,
+                                                     self.stimulus_output_device)
                 self.runStimuliClosedLoop()
             else:
                 self.sg = StimulusGenerator(self.canvas, self, self.stimulus_output_device, self.queue_reader)
@@ -388,7 +383,6 @@ class App:
                 self.data_path = self.getAppConfig("data_path", "str")
                 self.data_path = f"{self.data_path}\\\\{self.file_prefix}"
 
-
                 f = open(f'{self.data_path}\\create_video.py', "a")
                 f.write("import sys\n")
                 f.write(f"sys.path.append('C:\\\\Users\\\\owner\\\\Documents\\\\Code\\\\StimulusGenerator')\n")
@@ -404,7 +398,6 @@ class App:
                 self.run_start_time = time.time()
                 print(f"we need to split")"""
             self.canvas.after(constants.SLEEP_TIME, self.runStimuli)
-
 
     def calcGeometry(self, screen_width, screen_height):
         geometryStr = str(screen_width) + "x" + str(screen_height) + "+-10+0"
@@ -567,6 +560,7 @@ class App:
                 v = 500 + 500 * sin(radians(d)) * cos(radians(d / 2)) / sin(radians(90 - d / 2))
             self.positionDegreesToVSTable.append(v)
 
+
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
     appConfig = loadCSV(constants.APP_CONFIG_FILE)
@@ -580,13 +574,13 @@ if __name__ == '__main__':
             calibrator = Calibrator(live_camera=False,
                                     start_frame=197751,
                                     end_frame=197751 + 500,
-                                    images_path = "\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\\20231204-f2\\raw_data"
-            )
+                                    images_path="\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\\20231204-f2\\raw_data"
+                                    )
         else:
             calibrator = Calibrator(live_camera=True)
     root = Tk()
     root.title("Shacoof fish Stimuli Generator ")
     dark_title_bar(root)
-    app = App(root,calibrator)
+    app = App(root, calibrator)
     root.mainloop()
     sys.exit()

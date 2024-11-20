@@ -104,10 +104,10 @@ class Calibrator:
         return self.image_processor.get_image_matrix()
 
 
-    def start_calibrating(self, stimuli_queue = None):
+    def start_calibrating(self):
         self.bout_recognizer = self._init_bout_recognizer()
-        self._calc_mean_min_frame(stimuli_queue)
-        if fr_500:
+        self._calc_mean_min_frame()
+        if fr_for_realtime_is_500:
             self.pca_and_predict = PCA500Hz()
         else:
             self.pca_and_predict = PCA166Hz()
@@ -121,19 +121,11 @@ class Calibrator:
         self.image_processor.camera = None
         return self.pca_and_predict, self.image_processor, self.bout_recognizer, self.tail_tracker
 
-    def _calc_mean_min_frame(self,stimuli_queue):
+    def _calc_mean_min_frame(self):
         first_img_arr = self.first_image
         current_min = first_img_arr[self.focal_lim_y[0]:self.focal_lim_y[1], self.focal_lim_x[0]:self.focal_lim_x[1]]
         current_sum = first_img_arr
-        start_angle_of_stimuli = start_angle
-        end_angle_of_stimuli = end_angle
-        is_start = True
         for i in tqdm(range(self.num_frames)):
-            if i % 830 == 0:
-                if stimuli_queue:
-                    angle = start_angle_of_stimuli if is_start else end_angle_of_stimuli
-                    stimuli_queue.put((angle, 0))
-                    is_start = not is_start
             img_arr = self.load_image()
             self.bout_recognizer.update(img_arr)
             verdict, diff = self.bout_recognizer.is_start_of_bout(i)
@@ -152,7 +144,7 @@ class Calibrator:
 
     def _init_bout_recognizer(self):
         first_img_arr = self.first_image
-        if fr_500:
+        if fr_for_realtime_is_500:
             bout_recognizer = RecognizeBout(first_img_arr, 10, 3,
                                             7, plot_bout_detector, self.tail_mid)
         else: #166 Hz
