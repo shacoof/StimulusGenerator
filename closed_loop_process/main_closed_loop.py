@@ -31,7 +31,7 @@ def plot_worker(shared_data, lock):
         if is_bout is None:
             break
 
-
+        ax.clear()  # Clear the previous frame
         ax.imshow(image, cmap='gray', vmin=0, vmax=255)
 
 

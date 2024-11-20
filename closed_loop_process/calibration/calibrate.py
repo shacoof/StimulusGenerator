@@ -146,10 +146,10 @@ class Calibrator:
         first_img_arr = self.first_image
         if fr_for_realtime_is_500:
             bout_recognizer = RecognizeBout(first_img_arr, 10, 3,
-                                            7, plot_bout_detector, self.tail_mid)
+                                            7, False, self.tail_mid)
         else: #166 Hz
             bout_recognizer = RecognizeBout(first_img_arr, 10, 4,
-                                        5, plot_bout_detector, self.tail_mid)
+                                        5, False, self.tail_mid)
         return bout_recognizer
 
 
