@@ -16,7 +16,6 @@ def plot_worker(shared_data, lock):
     """
     plt.ion()
     fig, ax = plt.subplots()
-    tail_line, = ax.plot([], [], 'red', marker='o', markersize=1, label="Tail Trace")
     ax.axis('off')
 
     while True:
