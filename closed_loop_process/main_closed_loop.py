@@ -20,29 +20,25 @@ def plot_worker(shared_data, lock):
     ax.axis('off')
 
     while True:
-        # Read the shared values within the lock
         with lock:
             tail_points = shared_data["tail_points"]
             image = shared_data["image"]
             is_bout = shared_data["is_bout"]
             bout_index = shared_data["frame_number"]
 
-        # Check if termination condition
         if is_bout is None:
             break
 
         ax.clear()  # Clear the previous frame
         ax.imshow(image, cmap='gray', vmin=0, vmax=255)
 
-
         tail_x, tail_y = zip(*tail_points)
-        tail_line.set_data(tail_x, tail_y)
+        ax.plot(tail_x, tail_y, 'red', marker='o', markersize=1)
 
-        # Set title
-        ax.set_title(f"Bout Detected frame {bout_index}" if is_bout else f"Reproduced Tail from Angles frame {bout_index}",
-                     color='red' if is_bout else 'black')
+        ax.set_title(
+            f"Bout Detected frame {bout_index}" if is_bout else f"Reproduced Tail from Angles frame {bout_index}",
+            color='red' if is_bout else 'black')
 
-        # Draw efficiently with blit
         fig.canvas.draw()
         fig.canvas.flush_events()
     plt.close()
