@@ -378,7 +378,7 @@ def acquire_images(cam, nodemap):
 
                     #  Retrieve next received image
                     image_result = cam.GetNextImage(1000)
-                    image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), i, msg])
+                    image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), i])
             except PySpin.SpinnakerException as ex:
                 print('Error: %s' % ex)
                 result = False
