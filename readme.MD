@@ -29,7 +29,7 @@ backgroundColor
 virtualScreenColor
 stimulusColor
 VirtualScreenHeightActualSize
-NiDaqPulseEnabled = ON|OFF. if ON we send evetns to the computers that capture the microscope data, we send event at the begining of each STIMULUS
+NiDaqPulseEnabled = ON|OFF. if ON we send events to the computers that capture the microscope data, we send event at the begining of each STIMULUS
 projectorOnMonitor = 0|1|2 the number of the monitor that is the projector, e.g. what the fish sees. Controls where we project the Stimulus
 cameraControl = ON|OFF. if ON then camera is activated and capturing video 
 data_path = location where the files will be saved use double \\ for directory path, e.g. C:\\Data
@@ -51,7 +51,7 @@ startShapeRadius,endShapeRadius : measured in degrees
 fastDuration,slowDuration : distribution of time (in ms) for each phase 
 startMode : AFTER the previous stimulus completed or starting WITH the previous stimulus, in both cases delay (in ms) can be applied 
 fastSpeed/slowSpeed = measured in degrees per second 
-exitCriteria : if Distance then the stimulus ends when the shpae reaches the endX / endY. if Time then stimulus ends after X ms (as given by duration column)
+exitCriteria : if Distance then the stimulus ends when the shape reaches the endX / endY. if Time then stimulus ends after X ms (as given by duration column)
 duration is ignored for time based stimuli
 if distance is used then duration is ignored 
 if time is used then distance is also applicable, i.e. we don't allow the stimulus to go beyond endX,endY

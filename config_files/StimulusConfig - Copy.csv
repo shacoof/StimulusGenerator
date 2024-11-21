@@ -1,0 +1,4 @@
+Shape,startX,startY,endX,endY,repetitions,fastSpeed,slowSpeed,startShapeRadius,endShapeRadius,fastDuration,slowDuration,startMode,delay,duration
+Circle,30,600,150,600,2,0,0,4,2,500,500,After,0,5000
+Circle,150,450,30,450,10,0,0,2,4,500,500,After,5000,5000
+Circle,90,500,90,500,-1,0,0,4,4,100,100,After,7000,5000

@@ -180,7 +180,7 @@ class App:
     def get_fish_name(self):
         # get experiment prefix for file names etc.
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        fish_name = input(f"Enter fish name: ")
+        fish_name = "adi"
         self.file_prefix = f"{timestamp}_{fish_name}"
         self.data_path = f"{self.data_path}\\{self.file_prefix}\\trial_{self.trial_num}"
         while fish_name == '' or not create_directory(f"{self.data_path}"):

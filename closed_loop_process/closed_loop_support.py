@@ -1,7 +1,7 @@
 import logging
 import time
 from multiprocessing import queues
-from angle_dist_translater.AngleDistTranslator import AngleDistTranslator
+from StimulusMemory.StimulusMemory import StimulusMemory
 from closed_loop_process.print_time import reset_time, print_time, print_statistics, start_time_logger
 from config_files.closed_loop_config import *
 from closed_loop_process.main_closed_loop import ClosedLoop
@@ -11,40 +11,40 @@ import copy
 import pandas as pd
 import datetime
 
+from utils.utils import loadCSV
 
 
 class StimuliGeneratorClosedLoop:
-    def __init__(self, canvas, app, closed_loop_pred_queue = None, output_device=None, calib_mode=False):
-        self.start_trial_from_left = False
-        self.calib_mode = calib_mode
+    def __init__(self, canvas, app, closed_loop_pred_queue = None, output_device=None):
         self.closed_loop_pred_queue = closed_loop_pred_queue
         self.output_device = output_device
         self.canvas = canvas
         self.app = app
-        self.prev_time = time.time()
         self.batchNo = 0
-        self.stim_id = 1
-
+        stim_id = 0
+        self._init_stimulus_structs()
+        self.stimulusObjList = []
+        for st in loadCSV(STIMULUS_CONFIG):
+            stim_id += 1
+            self.stimulusObjList.append(Stimulus(st, canvas, app, stim_id))
+        self.print_stimulus_list()
 
         self.stimuli_log = pd.DataFrame(
             columns=['TS', 'Event Type', 'End/Start', 'Predicted Angle', 'Predicted Distance',
                      'Current Angle', 'Current Size'])
-        self._init_stimulus_structs()
-        if calib_mode:
-            self.stimuli_type = "start_left"
-            self.current_stim_struct = copy.deepcopy(self.calib_struct_left)
-        else:
-            self.stimuli_type = "floating"
-            self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
 
-        self.current_stimulus = Stimulus(self.current_stim_struct, canvas, app, 0)
-        self.renderer = AngleDistTranslator(int(self.current_stim_struct["startX"]),
-                                            int(self.current_stim_struct["startShapeRadius"]))
+
+        self.renderer = StimulusMemory(int(self.current_stim_struct["startX"]),
+                                       int(self.current_stim_struct["startShapeRadius"]))
+
+    def print_stimulus_list(self):
+        for i in self.stimulusObjList:
+            print(vars(i))
+
 
 
     def _init_stimulus_structs(self):
         float_duration = self.calc_duration(start_angle, end_angle, stimuli_floating_speed)
-        calib_duration = self.calc_duration(start_angle, end_angle, calibration_stimuli_speed)
         self.basic_stimulus_struct = {
             "exitCriteria": "Time", "startX": str(start_angle), "startY": '450', "endX": str(start_angle), "endY": '450',
             "repetitions": '1', "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": '4', "endShapeRadius": '4',
@@ -65,12 +65,7 @@ class StimuliGeneratorClosedLoop:
             "slowDuration": '0', "startMode": "AFTER", "delay": '0', "duration": str(spacer_duration),
             "xType": "degrees"
         }
-        self.calib_struct_left = copy.deepcopy(self.basic_stimulus_struct)
-        self.calib_struct_left.update(
-            {"startX": str(start_angle), "endX": str(end_angle), "duration": calib_duration})
-        self.calib_struct_right = copy.deepcopy(self.basic_stimulus_struct)
-        self.calib_struct_right.update(
-            {"startX": str(end_angle), "endX": str(start_angle), "duration": calib_duration})
+
 
 
     @staticmethod
@@ -111,47 +106,37 @@ class StimuliGeneratorClosedLoop:
             self.output_device.give_pulse()
             self.current_stimulus.trigger_out_sent = True
 
-
     def run_stimulus(self):
         # Ensure a stimulus is set and running
         if self.current_stimulus and self.current_stimulus.status == RUNNING:
             self.current_stimulus.move()
-            # update the angle_dist_translater's current angle and size
-            self.renderer.reset_food(int(self.current_stimulus.current_degree), int(self.current_stimulus.currRadius))
+            # update the StimulusMemory's current angle and size
+            self.renderer.reset_loc(int(self.current_stimulus.current_degree), int(self.current_stimulus.currRadius))
         else:
             self.stop_stimulus()
-            if self.calib_mode:
-                if self.stimuli_type == "start_left":
-                    self.current_stim_struct = copy.deepcopy(self.calib_struct_right)
-                    self.stimuli_type = "start_right"
+            if self.stimuli_type == "floating":  # change to spacer
+                self._send_pulse_and_write_log("trial","end", "NA","NA")
+                self.stimuli_type = "spacer"
+                self.start_trial_from_left = not self.start_trial_from_left
+                self.current_stim_struct = copy.deepcopy(self.stimulus_struct_spacer)
+            elif self.stimuli_type == "moving":  # change to floating from current point in the same direction
+                self._send_pulse_and_write_log("movement", "end", "NA", "NA")
+                self.stimuli_type = "floating"
+                if self.start_trial_from_left:
+                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
                 else:
-                    self.current_stim_struct = copy.deepcopy(self.calib_struct_left)
-                    self.stimuli_type = "start_left"
-
-            else:  # stimuli are done - need to initiate new stimuli
-                if self.stimuli_type == "floating":  # change to spacer
-                    self._send_pulse_and_write_log("trial","end", "NA","NA")
-                    self.stimuli_type = "spacer"
-                    self.start_trial_from_left = not self.start_trial_from_left
-                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_spacer)
-                elif self.stimuli_type == "moving":  # change to floating from current point in the same direction
-                    self._send_pulse_and_write_log("movement", "end", "NA", "NA")
-                    self.stimuli_type = "floating"
-                    if self.start_trial_from_left:
-                        self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
-                    else:
-                        self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_right)
-                    self.current_stim_struct["startX"] = self.renderer.current_angle
-                    self.current_stim_struct["duration"] = StimuliGeneratorClosedLoop.calc_duration(
-                        int(self.current_stim_struct["startX"]), int(self.current_stim_struct["endX"]),
-                        stimuli_floating_speed)
-                elif self.stimuli_type == "spacer":  # change to floating
-                    self._send_pulse_and_write_log("trial", "start", "NA", "NA")
-                    self.stimuli_type = "floating"
-                    if self.start_trial_from_left:
-                        self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
-                    else:
-                        self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_right)
+                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_right)
+                self.current_stim_struct["startX"] = self.renderer.current_angle
+                self.current_stim_struct["duration"] = StimuliGeneratorClosedLoop.calc_duration(
+                    int(self.current_stim_struct["startX"]), int(self.current_stim_struct["endX"]),
+                    stimuli_floating_speed)
+            elif self.stimuli_type == "spacer":  # change to floating
+                self._send_pulse_and_write_log("trial", "start", "NA", "NA")
+                self.stimuli_type = "floating"
+                if self.start_trial_from_left:
+                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
+                else:
+                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_right)
             self.current_stimulus = Stimulus(self.current_stim_struct, self.canvas, self.app, self.stim_id)
             self.start_stimulus()
 
