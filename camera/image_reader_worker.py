@@ -29,9 +29,9 @@ import sys
 import multiprocessing
 import time
 import datetime
-import utils
 from utils.utils import array_to_csv
 from config_files.closed_loop_config import *
+from NiDaq.NiDaqPulse import NiDaqPulse
 
 # this array of arrays is used to create a log of which frame was captured at the time of stimulus event
 # see NUM_IMAGES
@@ -496,9 +496,12 @@ def main():
     return result
 
 
-def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in, images_queue_in):
+def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in, images_queue_in, use_camera_output):
     global queue_reader, queue_writer, file_prefix, data_path, writer_process, camera_output_device, images_queue
     camera_output_device = None
+    if use_camera_output:
+        camera_output_device = NiDaqPulse(device_name=f"Dev2/port1/line6")
+
     data_path = path_in
     file_prefix = file_prefix_in
     name = multiprocessing.current_process().name

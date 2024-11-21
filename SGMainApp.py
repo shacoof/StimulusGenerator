@@ -85,8 +85,7 @@ class App:
                                                fill=self.vsColor)
 
         # Init NiDaq
-        if self.NiDaqPulseEnabled.lower() == "on":
-            self.init_NiDaq()
+        self.init_NiDaq()
 
         # Init camera
         if self.camera_control.lower() == "on":
@@ -98,6 +97,7 @@ class App:
 
         # Bind buttons
         self.bind_buttons()
+
 
     def bind_buttons(self):
         self.screen.bind('<Up>', self.processEvent)
@@ -208,7 +208,7 @@ class App:
                                                   target=image_reader_worker.camera_control_worker,
                                                   args=(
                                                       self.queue_reader, self.queue_writer, self.data_path,
-                                                      self.file_prefix, self.images_queue))
+                                                      self.file_prefix, self.images_queue, self.NiDaqPulseEnabled.lower() == "on"))
         self.writer_process1 = multiprocessing.Process(name='image_writer_worker1',
                                                        target=image_writer_worker.image_writer_worker,
                                                        args=(self.queue_writer, self.data_path, self.image_file_type))
