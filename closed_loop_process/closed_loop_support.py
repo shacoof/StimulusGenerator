@@ -126,6 +126,7 @@ class StimuliGeneratorClosedLoop:
             else:
                 self.spacerMode = False
                 self.spacer.terminate_run()
+                self.send_pulse_and_write_log("trial", "start", "NA", "NA", "NA")
         else:
             self.run_stimulus()
             # Check if there is a new movement from the queue
