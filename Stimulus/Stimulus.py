@@ -255,5 +255,6 @@ class Stimulus:
     def terminate_run(self):
         self.canvas.delete(self.shape)
 
+
     def __str__(self):
         return f'id = ({self.stimulusID} (x0,x1,y0,y1) {self.stXStart} {self.stXEnd} {self.stYStart} {self.stYEnd}(pixelsPerMS WxH) {round(self.PixelsPerMSFastX, 1)}X{round(self.PixelsPerMSFastY, 1)}'

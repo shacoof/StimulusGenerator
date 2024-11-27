@@ -559,6 +559,14 @@ class App:
                 d = i - 90
                 v = 500 + 500 * sin(radians(d)) * cos(radians(d / 2)) / sin(radians(90 - d / 2))
             self.positionDegreesToVSTable.append(v)
+        for j in range(181,360):
+            if 181 <= j <= 270:
+                d = j - 180
+                v = 1000 + 500 * sin(radians(d)) * cos(radians(d / 2)) / sin(radians(90 - d / 2))
+            else:
+                d = 90 - (j - 270)
+                v = -(500 - 500 * sin(radians(d)) * cos(radians(d / 2)) / sin(radians(90 - d / 2)))
+            self.positionDegreesToVSTable.append(v)
 
 
 if __name__ == '__main__':

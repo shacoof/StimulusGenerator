@@ -6,6 +6,7 @@ import os
 import cv2
 import glob
 import ctypes as ct
+import math
 
 
 def loadCSV(csvFileName):
@@ -111,3 +112,55 @@ def dark_title_bar(window):
     set_window_attribute(hwnd, rendering_policy, ct.byref(value), ct.sizeof(value))
     window.withdraw()  # added due to win10 adjustment, see comment inthe above youtueb
     window.deiconify()  # same as above
+
+def polar_to_cartesian(theta, r):
+    # Convert angle to radians
+    theta_radians = math.radians(theta)
+    # Calculate Cartesian coordinates
+    x = r * math.cos(theta_radians)
+    y = r * math.sin(theta_radians)
+    return x,y
+
+
+def signed_angle_between_vectors(u, v):
+    # Compute the 2D cross product (scalar)
+    cross_product = u[0] * v[1] - u[1] * v[0]
+
+    # Compute the dot product
+    dot_product = u[0] * v[0] + u[1] * v[1]
+
+    # Use atan2 to find the signed angle
+    angle_radians = math.atan2(cross_product, dot_product)
+
+    # Optionally convert to degrees
+    angle_degrees = math.degrees(angle_radians)
+    if angle_degrees < 0:
+        angle_degrees = angle_degrees + 360
+    return angle_degrees
+
+
+
+def angle_between_vectors_ccw(v1, v2):
+    """
+    Calculate the counterclockwise angle between two 2D vectors, returning a value in [0, 360).
+
+    Parameters:
+        v1 (tuple): First vector (x1, y1)
+        v2 (tuple): Second vector (x2, y2)
+
+    Returns:
+        float: Counterclockwise angle in degrees
+    """
+    # Compute the cross product and dot product
+    cross_product = v1[0] * v2[1] - v1[1] * v2[0]
+    dot_product = v1[0] * v2[0] + v1[1] * v2[1]
+
+    # Compute the angle in radians using atan2
+    angle_radians = math.atan2(cross_product, dot_product)
+
+    # Convert the angle to degrees and ensure it's in the range [0, 360)
+    angle_degrees = math.degrees(angle_radians)
+    if angle_degrees < 0:
+        angle_degrees += 360  # Ensure the angle is positive
+
+    return angle_degrees

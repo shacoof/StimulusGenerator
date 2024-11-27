@@ -5,172 +5,137 @@ from StimulusMemory.StimulusMemory import StimulusMemory
 from closed_loop_process.print_time import reset_time, print_time, print_statistics, start_time_logger
 from config_files.closed_loop_config import *
 from closed_loop_process.main_closed_loop import ClosedLoop
-from Stimulus.Stimulus import Stimulus
 from constants import *
-import copy
 import pandas as pd
 import datetime
-
+from Stimulus.Stimulus import Stimulus
 from utils.utils import loadCSV
 
 
 class StimuliGeneratorClosedLoop:
-    def __init__(self, canvas, app, closed_loop_pred_queue = None, output_device=None):
+    def __init__(self, canvas, app, closed_loop_pred_queue=None, output_device=None):
         self.closed_loop_pred_queue = closed_loop_pred_queue
         self.output_device = output_device
         self.canvas = canvas
         self.app = app
-        self.batchNo = 0
-        stim_id = 0
-        self._init_stimulus_structs()
-        self.stimulusObjList = []
-        for st in loadCSV(STIMULUS_CONFIG):
-            stim_id += 1
-            self.stimulusObjList.append(Stimulus(st, canvas, app, stim_id))
+        self.stim_id = 0
+        self.pulseID = 0
+        self.csv = loadCSV(STIMULUS_CONFIG)
+        self.batches = dict()
+        self._init_batches()
+        self.batches = {key: self.batches[key] for key in sorted(self.batches)}
+        self.batchKeys = sorted(self.batches.keys())
+        self.batchIndex = 0
+        self.numBatches = len(self.batches.keys())
+        self.batchStimulusObjList = self.batches[self.batchIndex]
         self.print_stimulus_list()
-
+        self.number_of_done_stimulus = 0
+        self.number_of_stimuli_in_batch = len(self.batchStimulusObjList)
+        self.spacerMode = False
+        self.spacer = self.init_spacer()
         self.stimuli_log = pd.DataFrame(
-            columns=['TS', 'Event Type', 'End/Start', 'Predicted Angle', 'Predicted Distance',
+            columns=['Pulse ID','Batch Number', 'TS', 'Event Type', 'End/Start','Reason', 'Stimulus ID', 'Stimulus Status', 'Predicted Angle',
+                     'Predicted Distance',
                      'Current Angle', 'Current Size'])
 
-
-        self.renderer = StimulusMemory(int(self.current_stim_struct["startX"]),
-                                       int(self.current_stim_struct["startShapeRadius"]))
-
-    def print_stimulus_list(self):
-        for i in self.stimulusObjList:
-            print(vars(i))
-
-
-
-    def _init_stimulus_structs(self):
-        float_duration = self.calc_duration(start_angle, end_angle, stimuli_floating_speed)
-        self.basic_stimulus_struct = {
-            "exitCriteria": "Time", "startX": str(start_angle), "startY": '450', "endX": str(start_angle), "endY": '450',
-            "repetitions": '1', "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": '4', "endShapeRadius": '4',
-            "fastDuration": '100', "slowDuration": '100', "startMode": "AFTER", "delay": '0', "duration": '3000',
-            "xType": "degrees"
-        }
-        self.stimulus_struct_start_left = copy.deepcopy(self.basic_stimulus_struct)
-        self.stimulus_struct_start_left.update(
-            {"startX": str(start_angle), "endX": str(end_angle), "duration": float_duration})
-
-        self.stimulus_struct_start_right = copy.deepcopy(self.basic_stimulus_struct)
-        self.stimulus_struct_start_right.update(
-            {"startX": str(end_angle), "endX": str(start_angle), "duration": float_duration})
-
-        self.stimulus_struct_spacer = {
+    def init_spacer(self):
+        spacer_struct = {
             "exitCriteria": "Spacer", "startX": '0', "startY": '0', "endX": '0', "endY": '0', "repetitions": '1',
             "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": '4', "endShapeRadius": '4', "fastDuration": '0',
-            "slowDuration": '0', "startMode": "AFTER", "delay": '0', "duration": str(spacer_duration),
-            "xType": "degrees"
-        }
+            "slowDuration": '0', "startMode": "WITH", "delay": '0', "duration": spacer_time_between_batches,
+            "xType": "degrees"}
+        return Stimulus(spacer_struct, self.canvas, self.app, self.stim_id)
 
+    def print_stimulus_list(self):
+        for i in self.batchStimulusObjList:
+            print(vars(i))
 
+    def end_of_batch(self, reason):
+        self.batchIndex += 1
+        self.send_pulse_and_write_log("trial", "end", "NA", "NA", reason)
+        for stimuli in self.batchStimulusObjList:
+            stimuli.stop_stimulus()
 
-    @staticmethod
-    def calc_duration(start_angle, end_angle, angular_velocity):
-        duration = str(round(abs(end_angle - start_angle) / angular_velocity * 1000))
-        return duration
+        if self.batchIndex < self.numBatches:
+            # TODO init Spacer
+            self.spacer.init_shape(0)
+            self.spacerMode = True
+            self.batchStimulusObjList = self.batches[self.batchKeys[self.batchIndex]]
+            self.number_of_done_stimulus = 0
+            self.number_of_stimuli_in_batch = len(self.batchStimulusObjList)
+        else:
+            pass
+            # TODO end of trial
 
-    def stop_stimulus(self):
-        if self.current_stimulus:
-            self.current_stimulus.terminate_run()
-            self.current_stimulus.status = DONE  # Set the status to DONE
-
-    def start_stimulus(self):
-        self.current_stimulus.init_shape(0)
-        print(f"New {self.stimuli_type} stimulus added with ID: {self.stim_id}")
-        self.stim_id += 1
-
-    def terminate_run(self):
-        self.current_stimulus.terminate_run()
+    def _init_batches(self):
+        for st in self.csv:
+            self.stim_id += 1
+            batch_num = int(st["batchNum"])
+            if batch_num in self.batches:
+                self.batches[batch_num].append(StimulusMemory(st, self.canvas, self.app, self.stim_id,self))
+            else:
+                self.batches[batch_num] = [StimulusMemory(st, self.canvas, self.app, self.stim_id,self)]
 
     def save_csv(self, path):
         self.stimuli_log.to_csv(path + '\stimuli_log.csv', index=False)
 
-    def _send_pulse_and_write_log(self, event_type, start_end, predicted_angle, predicted_distance):
+    def send_pulse_and_write_log(self, event_type, start_end, predicted_angle, predicted_distance,reason):
         """Send a pulse if required for the current stimulus."""
-        self.stimuli_log = self.stimuli_log.append(
-            {'TS': datetime.datetime.now().strftime("%H:%M:%S:%f"),
-             'Event Type': event_type,
-             'End/Start': start_end,
-             'Predicted Angle': predicted_angle,
-             'Predicted Distance': predicted_distance,
-             'Current Angle': self.renderer.current_angle,
-             'Current Size': self.renderer.current_size},
-            ignore_index=True
-        )
-        if not self.current_stimulus.trigger_out_sent and self.output_device:
-            self.app.setDebugText(f"Sent pulse for i={self.stim_id}, stimulus={self.current_stimulus}")
+        for st in self.batchStimulusObjList:
+            self.stimuli_log = self.stimuli_log.append(
+                {
+                    'Pulse ID': self.pulseID,
+                    'Batch Number': self.batchKeys[self.batchIndex],
+                    'TS': datetime.datetime.now().strftime("%H:%M:%S:%f"),
+                    'Event Type': event_type,
+                    'End/Start': start_end,
+                    'Reason': reason,
+                    'Stimulus ID': st.stim_id,
+                    'Stimulus Status': st.state,
+                    'Predicted Angle': predicted_angle,
+                    'Predicted Distance': predicted_distance,
+                    'Current Angle': st.current_angle,
+                    'Current Size': st.current_size},
+                ignore_index=True
+            )
+        if self.output_device:
+            self.app.setDebugText(f"Sent pulse for {event_type} {start_end}")
             self.output_device.give_pulse()
-            self.current_stimulus.trigger_out_sent = True
+        self.pulseID += 1
 
     def run_stimulus(self):
-        # Ensure a stimulus is set and running
-        if self.current_stimulus and self.current_stimulus.status == RUNNING:
-            self.current_stimulus.move()
-            # update the StimulusMemory's current angle and size
-            self.renderer.reset_loc(int(self.current_stimulus.current_degree), int(self.current_stimulus.currRadius))
-        else:
-            self.stop_stimulus()
-            if self.stimuli_type == "floating":  # change to spacer
-                self._send_pulse_and_write_log("trial","end", "NA","NA")
-                self.stimuli_type = "spacer"
-                self.start_trial_from_left = not self.start_trial_from_left
-                self.current_stim_struct = copy.deepcopy(self.stimulus_struct_spacer)
-            elif self.stimuli_type == "moving":  # change to floating from current point in the same direction
-                self._send_pulse_and_write_log("movement", "end", "NA", "NA")
-                self.stimuli_type = "floating"
-                if self.start_trial_from_left:
-                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
-                else:
-                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_right)
-                self.current_stim_struct["startX"] = self.renderer.current_angle
-                self.current_stim_struct["duration"] = StimuliGeneratorClosedLoop.calc_duration(
-                    int(self.current_stim_struct["startX"]), int(self.current_stim_struct["endX"]),
-                    stimuli_floating_speed)
-            elif self.stimuli_type == "spacer":  # change to floating
-                self._send_pulse_and_write_log("trial", "start", "NA", "NA")
-                self.stimuli_type = "floating"
-                if self.start_trial_from_left:
-                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_left)
-                else:
-                    self.current_stim_struct = copy.deepcopy(self.stimulus_struct_start_right)
-            self.current_stimulus = Stimulus(self.current_stim_struct, self.canvas, self.app, self.stim_id)
-            self.start_stimulus()
+
+        moving_stop = False
+        for i, stimulus in enumerate(self.batchStimulusObjList):
+            res = stimulus.update()
+            if res == "DONE: too big":
+                self.end_of_batch("reached min distance")
+            if res != "":
+                self.number_of_done_stimulus += 1
+            if res == "moving stop":
+                moving_stop = True
+        if moving_stop:
+            self.send_pulse_and_write_log("movement", "end", "NA", "NA","NA")
+        if self.number_of_done_stimulus >= self.number_of_stimuli_in_batch:
+            self.end_of_batch("all stimulus out of range")
 
     def run_stimuli_closed_loop(self):
-        self.run_stimulus()
-        # Check if there is a new stimulus from the queue
-        if self.closed_loop_pred_queue and not self.closed_loop_pred_queue.empty():
-            angle, distance = self.closed_loop_pred_queue.get()
-            if self.stimuli_type != "spacer":
-                self.stop_stimulus()
-                old_angle = self.renderer.current_angle
-                old_size = self.renderer.current_size
-                res = self.renderer.calc_new_angle_and_size(angle, distance)
-                if res is None:  # end of trial - the stimuli is out of range or the hunt is finished
-                    # run spacer
-                    self.stimuli_type = "spacer"
-                    self._send_pulse_and_write_log("trial", "end", str(angle), str(distance))
-                    self.current_stimulus = Stimulus(self.stimulus_struct_spacer, self.canvas, self.app, self.stim_id)
-                    self.start_trial_from_left = not self.start_trial_from_left
-                else:  # update with new movement angle and distance
-                    self.stimuli_type = "moving"
-                    self._send_pulse_and_write_log("movement", "start", str(angle), str(distance))
-                    new_angle, new_size = res
-                    self.modify_stimulus_dict(new_angle, new_size, old_angle, old_size)
-                    self.current_stimulus = Stimulus(self.current_stim_struct, self.canvas, self.app, self.stim_id)
-                self.start_stimulus()
+        if self.spacerMode:
+            if self.spacer.status == RUNNING:
+                self.spacer.move()
+            else:
+                self.spacerMode = False
+                self.spacer.terminate_run()
+        else:
+            self.run_stimulus()
+            # Check if there is a new movement from the queue
+            if self.closed_loop_pred_queue and not self.closed_loop_pred_queue.empty():
+                angle, distance = self.closed_loop_pred_queue.get()
+                self.send_pulse_and_write_log("movement", "start", angle, distance,"NA")
+                for stimulus in self.batchStimulusObjList:
+                    stimulus.move(angle, distance)
 
-    def modify_stimulus_dict(self, new_angle, new_distance, old_angle=None, old_size=None):
-        new_angle = round(new_angle)
-        new_distance = round(new_distance)
-        self.current_stim_struct.update({"exitCriteria": "Time", "startX": old_angle, "endX": str(new_angle),
-                                         "startShapeRadius": old_size, "endShapeRadius": str(new_distance),
-                                         "duration": self.calc_duration(int(old_angle), int(new_angle),
-                                                                        stimuli_moving_speed)})
+
 def empty_queue(queue):
     while not queue.empty():
         try:
@@ -179,7 +144,8 @@ def empty_queue(queue):
             break
 
 
-def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer,tail_tracker,image_processor, queue_predictions):
+def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer, tail_tracker, image_processor,
+                                 queue_predictions):
     import psutil
     j = 0
     p = psutil.Process()  # Get current process
@@ -202,7 +168,7 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
         try:
             i, image_result = queue_writer.get()
             print(f"time to image frame = {time.perf_counter() - prev_time}")
-            prev_time= time.perf_counter()
+            prev_time = time.perf_counter()
         except queues.Empty:
             print("Queue is empty, no item to retrieve.")
             continue

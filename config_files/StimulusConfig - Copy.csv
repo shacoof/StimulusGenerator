@@ -1,4 +1,7 @@
-Shape,startX,startY,endX,endY,repetitions,startShapeRadius,endShapeRadius,delay,angularVelocity,useSpacer
-Circle,30,600,150,600,2,4,2,0,5000,TRUE
-Circle,150,450,30,450,10,2,4,5000,5000,TRUE
-Circle,90,500,90,500,-1,4,4,7000,5000,FALSE
+Type,startX,startY,endX,endY,repetitions,startShapeRadius,endShapeRadius,delay,angularVelocity,useSpacer,spacerDuration,batchNum,useAfterFirstMovement
+Moving,30,600,150,600,2,4,2,0,5,TRUE,6000,1,TRUE
+Static,150,450,30,450,10,2,4,5000,6,TRUE,5000,1,TRUE
+Moving,90,500,90,500,-1,4,4,7000,7,FALSE,0,1,TRUE
+Moving,30,600,150,600,2,4,2,0,5,TRUE,6000,2,TRUE
+Static,150,450,30,450,10,2,4,5000,6,TRUE,5000,2,TRUE
+Moving,90,500,90,500,-1,4,4,7000,7,FALSE,0,2,TRUE
