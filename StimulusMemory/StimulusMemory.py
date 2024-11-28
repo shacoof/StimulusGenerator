@@ -16,7 +16,7 @@ STATIC = "static"
 
 
 class StimulusMemory:
-    def __init__(self, canvas, app, stimulus_struct, stim_id, stimuliGenerator):
+    def __init__(self, canvas, app, stimulus_struct, stim_id):
         """
         """
         self.type = stimulus_struct["Type"]
@@ -24,12 +24,12 @@ class StimulusMemory:
         self.startY = int(stimulus_struct["startY"])
         self.endX = int(stimulus_struct["endX"])
         self.endY = int(stimulus_struct["endY"])
-        self.useAfterFirstMovement = int(stimulus_struct["useAfterFirstMovement"])
+        self.useAfterFirstMovement = stimulus_struct["useAfterFirstMovement"]
         self.startShapeRadius = int(stimulus_struct["startShapeRadius"])
         self.endShapeRadius = int(stimulus_struct["endShapeRadius"])
         self.delay = int(stimulus_struct["delay"])
         self.repetitions = int(stimulus_struct["repetitions"])
-        self.useSpacer = int(stimulus_struct["useSpacer"])
+        self.useSpacer = stimulus_struct["useSpacer"]
         self.duration = int(stimulus_struct["duration"])
         self.useAfterFirstMovement = stimulus_struct["useAfterFirstMovement"]
         self.first_movement_occurred = False
@@ -55,9 +55,8 @@ class StimulusMemory:
         self.time_ms = 0
         self.max_size = 18
         self.min_size = 1
-        self.distance_from_fish = self.size_to_dist_from_fish(self.current_size)
         self.size_to_mm_ratio = 4  # 1 mm the fish advances is equivalent to 4 units in size of stimulus
-        self.stimuliGenerator = stimuliGenerator
+        self.distance_from_fish = self.size_to_dist_from_fish(self.current_size)
 
     def calc_new_angle_and_size(self, angle, distance):
         if angle > 90:
@@ -109,19 +108,18 @@ class StimulusMemory:
         return angle_fish_stim, distance_fish_stim
 
     def update(self):
+        print(self.state)
         if self.state == DONE:
             return ""
         self.time_ms += 1
         return_str = ""
         if self.stimulus_obj:  # is this stimulus initiated
-            if self.stimulus_obj.status == RUNNING:
-                self.stimulus_obj.move()
             self.current_angle = self.stimulus_obj.current_degree
             self.current_size = self.stimulus_obj.currRadius
             if not self.is_stim_in_angle_range() and self.type == DYNAMIC and self.state in [MOVING, PRESENTED]:
                 self.state = DONE
                 self.stop_stimulus()
-                self.stimuliGenerator.send_pulse_and_write_log(self, f"stimuli {self.stim_id}", "end", "NA", "NA", "out of angle range")
+                #self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "end", "NA", "NA", "out of angle range")
                 return "DONE: out of range"
             if self.is_stim_too_big() and self.state in [MOVING, PRESENTED]:
                 self.state = DONE
@@ -132,14 +130,16 @@ class StimulusMemory:
                 self.stop_stimulus()
                 return "DONE: too small"
 
-            else:  # this stimulus is done need to initiate a new one
+            if self.stimulus_obj.status == RUNNING:
+                self.stimulus_obj.move()
+            else:
                 self.stop_stimulus()
                 if self.state == MOVING:
                     self._init_after_moving_stimulus()
                     return_str =  "moving stop"
                 elif self.state == PRESENTED:
-                    self.stimuliGenerator.send_pulse_and_write_log(self, f"stimuli {self.stim_id}", "end", "NA",
-                                                                   "NA", f"finished rep {self.rep}")
+                    # self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "end", "NA",
+                    #                                                "NA", f"finished rep {self.rep}")
                     self.rep += 1
                     if self.rep <= self.repetitions:
 
@@ -149,13 +149,13 @@ class StimulusMemory:
                             self.state = SPACER
                         else:
                             self._init_symmetric_stimulus()
-                            self.stimuliGenerator.send_pulse_and_write_log(self, f"stimuli {self.stim_id}", "start", "NA",                                                  "NA", f"starting rep {self.rep}")
+                            #self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",                                                  "NA", f"starting rep {self.rep}")
                     else:
                         self.state = DONE
-                        return_str =  "DONE: finished all reps"
+                        return "DONE: finished all reps"
                 elif self.state == SPACER:
-                    self.stimuliGenerator.send_pulse_and_write_log(self, f"stimuli {self.stim_id}", "start", "NA",
-                                                                   "NA", f"starting rep {self.rep}")
+                    # self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",
+                    #                                                "NA", f"starting rep {self.rep}")
                     self._init_symmetric_stimulus()
                     self.state = PRESENTED
                 self.start_stimulus()
@@ -163,8 +163,8 @@ class StimulusMemory:
             # see if we need to initiate this stimulus
             if self.delay <= self.time_ms and self.repetitions > 0:
                 if not self.first_movement_occurred or self.useAfterFirstMovement == "TRUE":
-                    self.stimuliGenerator.send_pulse_and_write_log(self, f"stimuli {self.stim_id}", "start", "NA",
-                                                                   "NA", f"starting rep {self.rep}")
+                    # self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",
+                    #                                                "NA", f"starting rep {self.rep}")
                     self._init_stimulus()
                     self.state = PRESENTED
                     self.start_stimulus()

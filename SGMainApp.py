@@ -1,6 +1,6 @@
 from tkinter.ttk import tkinter
-import queue
 import threading
+from closed_loop_process.StimuliGeneratorCalib import StimuliGeneratorCalib
 from closed_loop_process.closed_loop_support import StimuliGeneratorClosedLoop, start_closed_loop_background
 import shutil
 import datetime
@@ -117,10 +117,9 @@ class App:
         self.printHelp("")
 
     def calibrate(self):
-        stimuli_queue = queue.Queue()
         calibrating_thread = threading.Thread(target=self.start_calibrating, args=(), daemon=True)
         calibrating_thread.start()
-        self.sg = StimuliGeneratorClosedLoop(self.canvas, self, calib_mode=True)
+        self.sg = StimuliGeneratorCalib(self.canvas, self)
         self.runStimuliClosedLoop()
         while self.state == constants.RUN:
             self.canvas.update()  # This keeps the UI responsive during the loop
@@ -357,7 +356,8 @@ class App:
     def runStimuliClosedLoop(self):
         if self.state != constants.RUN:
             return
-        self.sg.run_stimuli_closed_loop()
+        if not self.sg.run_stimuli_closed_loop():
+            self.leaveProg("finished all stimuli")
         self.canvas.after(constants.SLEEP_TIME, self.runStimuliClosedLoop)
 
     def runStimuli(self):  # this is main loop of stimulus

@@ -1,15 +1,9 @@
-import logging
-import time
-from multiprocessing import queues
-from StimulusMemory.StimulusMemory import StimulusMemory
-from closed_loop_process.print_time import reset_time, print_time, print_statistics, start_time_logger
+
 from config_files.closed_loop_config import *
-from closed_loop_process.main_closed_loop import ClosedLoop
 from Stimulus.Stimulus import Stimulus
 from constants import *
 import copy
-import pandas as pd
-import datetime
+
 
 class StimuliGeneratorCalib:
     def __init__(self, canvas, app):
@@ -18,6 +12,7 @@ class StimuliGeneratorCalib:
         self.app = app
         self.stim_id = 1
         self.stimuli_type = "start_left"
+        self._init_stimulus_structs()
         self.current_stim_struct = copy.deepcopy(self.calib_struct_left)
         self.current_stimulus = Stimulus(self.current_stim_struct, canvas, app, 0)
 
@@ -74,6 +69,7 @@ class StimuliGeneratorCalib:
             self.current_stimulus = Stimulus(self.current_stim_struct, self.canvas, self.app, self.stim_id)
             self.start_stimulus()
 
-    def run_stimuli_calib(self):
+    def run_stimuli_closed_loop(self):
         self.run_stimulus()
+        return True
 

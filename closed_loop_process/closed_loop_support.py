@@ -22,17 +22,17 @@ class StimuliGeneratorClosedLoop:
         self.pulseID = 0
         self.csv = loadCSV(STIMULUS_CONFIG)
         self.batches = dict()
-        self._init_batches()
-        self.batches = {key: self.batches[key] for key in sorted(self.batches)}
-        self.batchKeys = sorted(self.batches.keys())
         self.batchIndex = 0
+        self._init_batches()
+        self.batchKeys = sorted(self.batches.keys())
         self.numBatches = len(self.batches.keys())
-        self.batchStimulusObjList = self.batches[self.batchIndex]
+        self.batchStimulusObjList = self.batches[self.batchKeys[self.batchIndex]]
         self.print_stimulus_list()
         self.number_of_done_stimulus = 0
         self.number_of_stimuli_in_batch = len(self.batchStimulusObjList)
         self.spacerMode = False
         self.spacer = self.init_spacer()
+        self.finished_all_reps = False
         self.stimuli_log = pd.DataFrame(
             columns=['Pulse ID','Batch Number', 'TS', 'Event Type', 'End/Start','Reason', 'Stimulus ID', 'Stimulus Status', 'Predicted Angle',
                      'Predicted Distance',
@@ -50,42 +50,45 @@ class StimuliGeneratorClosedLoop:
         for i in self.batchStimulusObjList:
             print(vars(i))
 
+    def terminate_run(self):
+        for st in self.batchStimulusObjList:
+            st.stop_stimulus()
+
     def end_of_batch(self, reason):
-        self.batchIndex += 1
         self.send_pulse_and_write_log("trial", "end", "NA", "NA", reason)
-        for stimuli in self.batchStimulusObjList:
-            stimuli.stop_stimulus()
+        self.batchIndex += 1
+        self.terminate_run()
 
         if self.batchIndex < self.numBatches:
-            # TODO init Spacer
             self.spacer.init_shape(0)
             self.spacerMode = True
             self.batchStimulusObjList = self.batches[self.batchKeys[self.batchIndex]]
             self.number_of_done_stimulus = 0
             self.number_of_stimuli_in_batch = len(self.batchStimulusObjList)
         else:
-            pass
-            # TODO end of trial
+            self.finished_all_reps = True
 
     def _init_batches(self):
         for st in self.csv:
             self.stim_id += 1
             batch_num = int(st["batchNum"])
             if batch_num in self.batches:
-                self.batches[batch_num].append(StimulusMemory(st, self.canvas, self.app, self.stim_id,self))
+                self.batches[batch_num].append(StimulusMemory(self.canvas, self.app, st,self.stim_id,))
             else:
-                self.batches[batch_num] = [StimulusMemory(st, self.canvas, self.app, self.stim_id,self)]
+                self.batches[batch_num] = [StimulusMemory(self.canvas, self.app, st, self.stim_id,)]
 
     def save_csv(self, path):
         self.stimuli_log.to_csv(path + '\stimuli_log.csv', index=False)
 
-    def send_pulse_and_write_log(self, event_type, start_end, predicted_angle, predicted_distance,reason):
+
+
+    def send_pulse_and_write_log(self, event_type, start_end, predicted_angle, predicted_distance, reason):
         """Send a pulse if required for the current stimulus."""
         for st in self.batchStimulusObjList:
             self.stimuli_log = self.stimuli_log.append(
                 {
                     'Pulse ID': self.pulseID,
-                    'Batch Number': self.batchKeys[self.batchIndex],
+                    'Batch Number': self.batchIndex,
                     'TS': datetime.datetime.now().strftime("%H:%M:%S:%f"),
                     'Event Type': event_type,
                     'End/Start': start_end,
@@ -104,7 +107,6 @@ class StimuliGeneratorClosedLoop:
         self.pulseID += 1
 
     def run_stimulus(self):
-
         moving_stop = False
         for i, stimulus in enumerate(self.batchStimulusObjList):
             res = stimulus.update()
@@ -112,6 +114,7 @@ class StimuliGeneratorClosedLoop:
                 self.end_of_batch("reached min distance")
             if res != "":
                 self.number_of_done_stimulus += 1
+                print("done.............")
             if res == "moving stop":
                 moving_stop = True
         if moving_stop:
@@ -120,6 +123,8 @@ class StimuliGeneratorClosedLoop:
             self.end_of_batch("all stimulus out of range")
 
     def run_stimuli_closed_loop(self):
+        if self.finished_all_reps:
+            return False
         if self.spacerMode:
             if self.spacer.status == RUNNING:
                 self.spacer.move()
@@ -135,6 +140,7 @@ class StimuliGeneratorClosedLoop:
                 self.send_pulse_and_write_log("movement", "start", angle, distance,"NA")
                 for stimulus in self.batchStimulusObjList:
                     stimulus.move(angle, distance)
+        return True
 
 
 def empty_queue(queue):
@@ -156,20 +162,17 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
     print("Closed loop started")
     empty_queue(queue_writer)
     start_time_logger('CLOSED LOOP')
-    prev_time = time.perf_counter()
     while state.value == 1:
         reset_time()
         print('after reset')
         images_queue_size = queue_writer.qsize()
-        print(images_queue_size)
         if images_queue_size > 1:
-            print(f"Warning: images queue size is of size {images_queue_size}")
+            #print(f"Warning: images queue size is of size {images_queue_size}")
+            pass
 
         print_time('before queue')
         try:
             i, image_result = queue_writer.get()
-            print(f"time to image frame = {time.perf_counter() - prev_time}")
-            prev_time = time.perf_counter()
         except queues.Empty:
             print("Queue is empty, no item to retrieve.")
             continue

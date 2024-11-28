@@ -1,5 +1,5 @@
 import time
-
+from config_files.closed_loop_config import debug_time
 import numpy as np
 
 GLOBAL_START = 0
@@ -11,7 +11,8 @@ def print_time(msg):
     if msg not in TIMES_REC:
         TIMES_REC[msg] = []
     TIMES_REC[msg].append(t)
-    print(PROCESS_NAME, msg, '{:.1f}'.format(t), flush=True)
+    if debug_time:
+        print(PROCESS_NAME, msg, '{:.1f}'.format(t), flush=True)
 
 
 def start_time_logger(name):

@@ -1,4 +1,5 @@
-debug_mode = True
+debug_mode = False
+debug_time = False
 emulator_with_camera = False
 camera_emulator_on = False
 number_of_tail_segments = 23
