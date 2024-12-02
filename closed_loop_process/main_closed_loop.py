@@ -71,18 +71,19 @@ class ClosedLoop:
         start_frame = 197751
         end_frame = 198450
         self.all_frame_mats = []
-        images_path = "\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\\20231204-f2\\raw_data"
-        for i in range(start_frame, end_frame + 1):
-            # Format the image filename based on the numbering pattern
-            img_filename = f"img{str(i).zfill(12)}.jpg"
-            img_path = os.path.join(images_path, img_filename)
-            try:
-                with Image.open(img_path) as img:
-                    image_matrix = np.array(img)
-                    self.all_frame_mats.append(image_matrix)
-            except Exception as e:
-                print(f"Error loading image: {e}")
-        self.number_of_frames = len(self.all_frame_mats)
+        if emulator_with_camera:
+            images_path = "\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\\20231204-f2\\raw_data"
+            for i in range(start_frame, end_frame + 1):
+                # Format the image filename based on the numbering pattern
+                img_filename = f"img{str(i).zfill(12)}.jpg"
+                img_path = os.path.join(images_path, img_filename)
+                try:
+                    with Image.open(img_path) as img:
+                        image_matrix = np.array(img)
+                        self.all_frame_mats.append(image_matrix)
+                except Exception as e:
+                    print(f"Error loading image: {e}")
+            self.number_of_frames = len(self.all_frame_mats)
         if debug_mode:
             self.plot_process.start()
             process5_psutil = psutil.Process(self.plot_process.pid)
@@ -133,7 +134,7 @@ class ClosedLoop:
             #last bout frame
             if self.bout_index == frames_from_bout - 1:
                 self.is_bout = False
-                angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(self.bout_frames, to_plot=debug_PCA)
+                angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(self.bout_frames, to_plot=False)
                 self.bout_frames = np.zeros((frames_from_bout, 98))
                 self.multiprocess_prediction_queue.put((angle, distance))
                 print(f"time to process bout {time.time() - self.bout_start_time}")

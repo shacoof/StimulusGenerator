@@ -110,17 +110,20 @@ class StimuliGeneratorClosedLoop:
         moving_stop = False
         for i, stimulus in enumerate(self.batchStimulusObjList):
             res = stimulus.update()
+            if res != "":
+                print(res)
             if res == "DONE: too big":
                 self.end_of_batch("reached min distance")
-            if res != "":
+                return
+            if res != "" and res != "moving stop":
                 self.number_of_done_stimulus += 1
-                print("done.............")
             if res == "moving stop":
                 moving_stop = True
         if moving_stop:
             self.send_pulse_and_write_log("movement", "end", "NA", "NA","NA")
         if self.number_of_done_stimulus >= self.number_of_stimuli_in_batch:
             self.end_of_batch("all stimulus out of range")
+
 
     def run_stimuli_closed_loop(self):
         if self.finished_all_reps:
@@ -133,7 +136,9 @@ class StimuliGeneratorClosedLoop:
                 self.spacer.terminate_run()
                 self.send_pulse_and_write_log("trial", "start", "NA", "NA", "NA")
         else:
+            start_time = time.time()
             self.run_stimulus()
+            #(f"time to run stimulus {time.time() - start_time}")
             # Check if there is a new movement from the queue
             if self.closed_loop_pred_queue and not self.closed_loop_pred_queue.empty():
                 angle, distance = self.closed_loop_pred_queue.get()
@@ -164,7 +169,6 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
     start_time_logger('CLOSED LOOP')
     while state.value == 1:
         reset_time()
-        print('after reset')
         images_queue_size = queue_writer.qsize()
         if images_queue_size > 1:
             #print(f"Warning: images queue size is of size {images_queue_size}")

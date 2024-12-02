@@ -1,13 +1,13 @@
-debug_mode = False
+debug_mode = True
 debug_time = False
-emulator_with_camera = False
+emulator_with_camera = True
 camera_emulator_on = False
 number_of_tail_segments = 23
 start_angle = 30 # The entire screen spans 15 - 165 degrees
 end_angle = 150
-stimuli_moving_time = 400 # time until update in ms
+stimuli_moving_time = 1000 # time until update in ms
 calibration_stimuli_speed = 300
-number_of_frames_calibration = 10000
+number_of_frames_calibration = 100
 cut_velocity_by_factor = 1 # between zero and one - how to reduce velocity after movement
 use_stytra_tracking = True
 camera_frame_rate = 250 # either 166, 250 or 500
