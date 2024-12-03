@@ -1,4 +1,4 @@
-debug_mode = True
+debug_mode = False
 debug_time = False
 emulator_with_camera = True
 camera_emulator_on = False

@@ -108,46 +108,62 @@ class ClosedLoop:
         self.plot_process.join()
 
     def process_frame(self, frame):
+        time_now = time.time()
+        self.bout_start_time = time_now
 
-        if frame is None:
-            if debug_mode:
-                self.stop_plotting()
-            return
-
-        if emulator_with_camera:
-            frame = self.all_frame_mats[self.current_frame%len(self.all_frame_mats)]
-
-        print_time('before tail_tracking')
-        tail_angles, tail_points = self.tail_tracker.tail_tracking(frame)
-        print_time('after tail_tracking')
-
-        if self.current_frame % 10 == 0 and debug_mode:
-            self.update_shared_data(tail_points, frame)
-        self.current_frame +=1
-
-        self.bout_recognizer.update(frame)
-        print_time('after bout_recognizer')
-        # if this is a bout frame
-        if self.is_bout:
-            self.bout_index += 1
-            self.bout_frames[self.bout_index, :] = tail_angles
-            #last bout frame
-            if self.bout_index == frames_from_bout - 1:
-                self.is_bout = False
-                angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(self.bout_frames, to_plot=False)
-                self.bout_frames = np.zeros((frames_from_bout, 98))
-                self.multiprocess_prediction_queue.put((angle, distance))
-                print(f"time to process bout {time.time() - self.bout_start_time}")
-                print(
-                    f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
+        time.sleep(10)
+        if self.current_frame % 2 == 0:
+            angle = -40
+            distance = 0.5
         else:
-            verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
-            print_time('after is_start_of_bout')
-            if verdict:
-                self.bout_start_time = time.time()
-                self.bout_index = 0
-                self.is_bout = True
-                self.bout_frames[self.bout_index, :] = tail_angles
+            angle = 40
+            distance = 1
+        print(f"angle {angle} distance {distance}")
+        self.multiprocess_prediction_queue.put((angle, distance))
+        self.current_frame += 1
+
+        print(time.time() - self.frame_time)
+        self.frame_time = time.time()
+
+        # if frame is None:
+        #     if debug_mode:
+        #         self.stop_plotting()
+        #     return
+        #
+        # if emulator_with_camera:
+        #     frame = self.all_frame_mats[self.current_frame%len(self.all_frame_mats)]
+        #
+        # print_time('before tail_tracking')
+        # tail_angles, tail_points = self.tail_tracker.tail_tracking(frame)
+        # print_time('after tail_tracking')
+        #
+        # if self.current_frame % 10 == 0 and debug_mode:
+        #     self.update_shared_data(tail_points, frame)
+        # self.current_frame +=1
+        #
+        # self.bout_recognizer.update(frame)
+        # print_time('after bout_recognizer')
+        # # if this is a bout frame
+        # if self.is_bout:
+        #     self.bout_index += 1
+        #     self.bout_frames[self.bout_index, :] = tail_angles
+        #     #last bout frame
+        #     if self.bout_index == frames_from_bout - 1:
+        #         self.is_bout = False
+        #         angle, distance = self.pca_and_predict.reduce_dimensionality_and_predict(self.bout_frames, to_plot=False)
+        #         self.bout_frames = np.zeros((frames_from_bout, 98))
+        #         self.multiprocess_prediction_queue.put((angle, distance))
+        #         print(f"time to process bout {time.time() - self.bout_start_time}")
+        #         print(
+        #             f"frame {self.current_frame} predicted angle {angle}, predicted distance {distance}")
+        # else:
+        #     verdict, diff = self.bout_recognizer.is_start_of_bout(self.current_frame)
+        #     print_time('after is_start_of_bout')
+        #     if verdict:
+        #         self.bout_start_time = time.time()
+        #         self.bout_index = 0
+        #         self.is_bout = True
+        #         self.bout_frames[self.bout_index, :] = tail_angles
 
 
 

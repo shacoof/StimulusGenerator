@@ -32,14 +32,14 @@ class StimulusMemory:
         self.useSpacer = stimulus_struct["useSpacer"].lower() == "true"
         self.duration = int(stimulus_struct["duration"])
         self.first_movement_occurred = False
-        self.stimuli_speed = self.calc_angular_velocity(self.startX, self.endX, self.duration)
+        self.stimuli_speed = int(self.calc_angular_velocity(self.startX, self.endX, self.duration))
         self.spacerDuration = int(stimulus_struct["spacerDuration"])
         self.original_struct = stimulus_struct
         self.canvas = canvas
-        if self.startX >= self.endX:
-            self.direction_left_to_right = True
-        else:
+        if self.startX <= self.endX:
             self.direction_left_to_right = False
+        else:
+            self.direction_left_to_right = True
         if self.startX != self.endX and self.type == STATIC:
             print("static type need to have the same start and end")
             self.startX = self.endX
@@ -76,7 +76,7 @@ class StimulusMemory:
         return round(self.current_angle), round(self.current_size)
 
     def is_stim_in_angle_range(self):
-        if 0 < self.current_angle < 180:
+        if -1 <= self.current_angle <= 181:
             return True
         return False
 
@@ -119,7 +119,7 @@ class StimulusMemory:
             self.current_size = self.stimulus_obj.currRadius
             if self.state == OOR and self.is_stim_in_angle_range():
                 self.state = PRESENTED
-            if not self.is_stim_in_angle_range() and self.state in [MOVING, PRESENTED] and self.type == DYNAMIC:
+            if not self.is_stim_in_angle_range() and self.state in [MOVING, PRESENTED]:
                 if self.type == DYNAMIC:
                     self.state = DONE
                     self.stop_stimulus()
@@ -143,7 +143,7 @@ class StimulusMemory:
                     self.state = PRESENTED
                     self._init_after_moving_stimulus()
                     return_str =  "moving stop"
-                elif self.state == PRESENTED:
+                elif self.state == PRESENTED and (not self.first_movement_occurred or self.useAfterFirstMovement == "TRUE"):
                     # self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "end", "NA",
                     #                                                "NA", f"finished rep {self.rep}")
                     self.rep += 1
@@ -176,6 +176,7 @@ class StimulusMemory:
                     self.state = PRESENTED
                     self.start_stimulus()
         return return_str
+
 
     def _init_spacer(self):
         spacer_struct = {
@@ -214,21 +215,21 @@ class StimulusMemory:
         else:
             self.stimuli_speed = self.stimuli_speed * cut_velocity_by_factor
             duration = self.calc_duration(self.startX, self.endX, self.stimuli_speed)
-            end_angle = 180
+            end_angle = 181
             if self.direction_left_to_right:
-                end_angle = 0
+                end_angle = -1
             stimulus_struct = {
-                "exitCriteria": "Time", "startX": str(start_angle), "startY": str(current_y), "endX": str(end_angle),
-                "endY": str(current_y),
-                "repetitions": '1', "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": str(start_size),
-                "endShapeRadius": str(start_size),
+                "exitCriteria": "Time", "startX": str(round(start_angle)), "startY": str(round(current_y)), "endX": str(round(end_angle)),
+                "endY": str(round(current_y)),
+                "repetitions": '1', "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": str(round(start_size)),
+                "endShapeRadius": str(round(start_size)),
                 "fastDuration": '100', "slowDuration": '100', "startMode": "WITH", "delay": '0', "duration": duration,
                 "xType": "degrees"
             }
         self.stimulus_obj = Stimulus(stimulus_struct, self.canvas, self.app, self.stim_id)
 
     def _init_symmetric_stimulus(self):
-        self.direction_left_to_right = not self.direction_left_to_right
+
         if self.direction_left_to_right:
             self._init_stimulus()
         else:
@@ -242,7 +243,7 @@ class StimulusMemory:
                 "xType": "degrees"
             }
             self.stimulus_obj = Stimulus(stimulus_struct, self.canvas, self.app, self.stim_id)
-
+        self.direction_left_to_right = not self.direction_left_to_right
 
     def _init_stimulus(self):
         stimulus_struct = {
