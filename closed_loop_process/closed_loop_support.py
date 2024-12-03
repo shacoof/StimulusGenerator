@@ -38,6 +38,7 @@ class StimuliGeneratorClosedLoop:
                      'Predicted Distance',
                      'Current Angle', 'Current Size'])
 
+
     def init_spacer(self):
         spacer_struct = {
             "exitCriteria": "Spacer", "startX": '0', "startY": '0', "endX": '0', "endY": '0', "repetitions": '1',
@@ -124,6 +125,12 @@ class StimuliGeneratorClosedLoop:
         if self.number_of_done_stimulus >= self.number_of_stimuli_in_batch:
             self.end_of_batch("all stimulus out of range")
 
+    def all_stimuli_inactive(self):
+        for stim in self.batchStimulusObjList:
+            if stim.state != "inactive":
+                return False
+        return True
+
 
     def run_stimuli_closed_loop(self):
         if self.finished_all_reps:
@@ -143,6 +150,8 @@ class StimuliGeneratorClosedLoop:
             if self.closed_loop_pred_queue and not self.closed_loop_pred_queue.empty():
                 angle, distance = self.closed_loop_pred_queue.get()
                 self.send_pulse_and_write_log("movement", "start", angle, distance,"NA")
+                if self.all_stimuli_inactive():
+                    return True
                 for stimulus in self.batchStimulusObjList:
                     stimulus.move(angle, distance)
         return True

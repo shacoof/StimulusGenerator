@@ -19,7 +19,7 @@ class StimulusMemory:
     def __init__(self, canvas, app, stimulus_struct, stim_id):
         """
         """
-        self.type = stimulus_struct["Type"]
+        self.type = stimulus_struct["Type"].lower()
         self.startX = int(stimulus_struct["startX"])
         self.startY = int(stimulus_struct["startY"])
         self.endX = int(stimulus_struct["endX"])
@@ -40,6 +40,7 @@ class StimulusMemory:
             self.direction_left_to_right = False
         else:
             self.direction_left_to_right = True
+        self.direction = False
         if self.startX != self.endX and self.type == STATIC:
             print("static type need to have the same start and end")
             self.startX = self.endX
@@ -109,7 +110,7 @@ class StimulusMemory:
 
 
     def update(self):
-        print(f"{self.state} {self.stim_id}")
+        print(f"{self.state} {self.stim_id} {self.current_angle}")
         if self.state == DONE:
             return ""
         self.time_ms += 1
@@ -137,15 +138,14 @@ class StimulusMemory:
                 return "DONE: too small"
             if self.stimulus_obj.status == RUNNING:
                 self.stimulus_obj.move()
-                if self.state == MOVING:
-                    print("moved")
             else:
                 self.stop_stimulus()
                 if self.state == MOVING:
                     self.state = PRESENTED
                     self._init_after_moving_stimulus()
                     return_str =  "moving stop"
-                elif self.state == PRESENTED and (not self.first_movement_occurred or self.useAfterFirstMovement == "TRUE"):
+                elif self.state == PRESENTED and (not self.first_movement_occurred or self.useAfterFirstMovement):
+
                     # self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "end", "NA",
                     #                                                "NA", f"finished rep {self.rep}")
                     self.rep += 1
@@ -155,36 +155,43 @@ class StimulusMemory:
                             self._init_spacer()
                             self.state = SPACER
                         else:
-                            self._init_symmetric_stimulus()
-                            #self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",
+                            if self.type == STATIC:
+                                self._init_static_stimulus()
+                            else:
+                                self._init_symmetric_stimulus()
+                            # self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",
                             # "NA", f"starting rep {self.rep}")
                     else:
+                        print("finished w dynamic stim")
                         self.state = DONE
                         return "DONE: finished all reps"
+
                 elif self.state == SPACER:
                     # self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",
                     #                                                "NA", f"starting rep {self.rep}")
                     self.state = PRESENTED
                     self._init_symmetric_stimulus()
-
                 self.start_stimulus()
         else:
-            # see if we need to initiate this stimulus
-            if self.delay <= self.time_ms and self.repetitions > 0:
-                if not self.first_movement_occurred or self.useAfterFirstMovement == "TRUE":
+            if not self.first_movement_occurred or self.useAfterFirstMovement:
+                if self.delay <= self.time_ms and self.repetitions > 0:
                     # self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",
                     #                                                "NA", f"starting rep {self.rep}")
                     self._init_stimulus()
                     self.state = PRESENTED
                     self.start_stimulus()
+            else:
+                self.state = DONE
+                return_str = "DONE: irrelevant after first movement"
         return return_str
+
 
 
     def _init_spacer(self):
         spacer_struct = {
             "exitCriteria": "Spacer", "startX": '0', "startY": '0', "endX": '0', "endY": '0', "repetitions": '1',
             "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": '4', "endShapeRadius": '4', "fastDuration": '0',
-            "slowDuration": '0', "startMode": "WITH", "delay": '0', "duration": self.spacerDuration,
+            "slowDuration": '0', "startMode": "WITH", "delay": '0', "duration": str(self.spacerDuration),
             "xType": "degrees"}
         self.stimulus_obj = Stimulus(spacer_struct, self.canvas, self.app, self.stim_id)
 
@@ -195,11 +202,12 @@ class StimulusMemory:
             "endY": str(round(current_y)),
             "repetitions": '1', "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": str(round(old_size)),
             "endShapeRadius": str(round(new_size)),
-            "fastDuration": '100', "slowDuration": '100', "startMode": "WITH", "delay": '0', "duration": stimuli_moving_time,
+            "fastDuration": '100', "slowDuration": '100', "startMode": "WITH", "delay": '0', "duration": str(stimuli_moving_time),
             "xType": "degrees"
         }
         self.stimulus_obj = Stimulus(stimulus_struct, self.canvas, self.app, self.stim_id)
-        self.state = MOVING
+
+
 
     def _init_after_moving_stimulus(self):
         current_y = self.startY
@@ -217,9 +225,9 @@ class StimulusMemory:
         else:
             self.stimuli_speed = self.stimuli_speed * cut_velocity_by_factor
             duration = self.calc_duration(self.startX, self.endX, self.stimuli_speed)
-            end_angle = 181
+            end_angle = 182
             if self.direction_left_to_right:
-                end_angle = -1
+                end_angle = -2
             stimulus_struct = {
                 "exitCriteria": "Time", "startX": str(round(start_angle)), "startY": str(round(current_y)), "endX": str(round(end_angle)),
                 "endY": str(round(current_y)),
@@ -231,8 +239,7 @@ class StimulusMemory:
         self.stimulus_obj = Stimulus(stimulus_struct, self.canvas, self.app, self.stim_id)
 
     def _init_symmetric_stimulus(self):
-
-        if self.direction_left_to_right:
+        if self.direction:
             self._init_stimulus()
         else:
             stimulus_struct = {
@@ -246,6 +253,7 @@ class StimulusMemory:
             }
             self.stimulus_obj = Stimulus(stimulus_struct, self.canvas, self.app, self.stim_id)
         self.direction_left_to_right = not self.direction_left_to_right
+        self.direction = not self.direction
 
     def _init_stimulus(self):
         stimulus_struct = {
@@ -257,6 +265,18 @@ class StimulusMemory:
             "xType": "degrees"
         }
         self.stimulus_obj = Stimulus(stimulus_struct, self.canvas, self.app, self.stim_id)
+
+    def _init_static_stimulus(self):
+        stimulus_struct = {
+            "exitCriteria": "Time", "startX": str(round(self.current_angle)), "startY": str(self.startY), "endX": str(round(self.current_angle)),
+            "endY": str(round(self.startY)),
+            "repetitions": '1', "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": str(round(self.current_size)),
+            "endShapeRadius": str(round(self.current_size)),
+            "fastDuration": '100', "slowDuration": '100', "startMode": "WITH", "delay": '0', "duration": '10000',
+            "xType": "degrees"
+        }
+        self.stimulus_obj = Stimulus(stimulus_struct, self.canvas, self.app, self.stim_id)
+
 
     @staticmethod
     def calc_duration(start_angle, end_angle, angular_velocity):
@@ -278,11 +298,15 @@ class StimulusMemory:
         print(f"New {self.state} stimulus added with ID: {self.stim_id}")
 
     def move(self, moving_angle, moving_dist):
-        if self.state != INACTIVE and self.state != SPACER and self.stimulus_obj:
+        self.first_movement_occurred = True
+        if self.state not in [INACTIVE, SPACER, DONE] and self.stimulus_obj:
+            self.state = MOVING
             self.stop_stimulus()
+            old_angle = self.current_angle
+            old_size = self.current_size
             res = self.calc_new_angle_and_size(moving_angle, moving_dist)
             new_angle, new_size = res
-            self._init_moving_stimulus(new_angle, new_size, self.current_angle, self.current_size)
+            self._init_moving_stimulus(new_angle, new_size, old_angle, old_size)
             self.start_stimulus()
 
     def size_to_dist_from_fish(self, size):
@@ -292,67 +316,3 @@ class StimulusMemory:
     def dist_from_fish_to_size(self, dist):
         size = -self.size_to_mm_ratio * dist + self.max_size
         return size
-#
-#
-# # testing angle, distance updates
-# # stim , fish
-# stim_angle = 90
-# stim_distance = 1
-# fish_angle = 180
-# fish_distance = 1
-# print(StimulusMemory._calc_angle_dist_to_fish(fish_angle, fish_distance, stim_angle, stim_distance))
-# stim_angle = 90
-# stim_distance = 1
-# fish_angle = 0
-# fish_distance = 1
-# print(StimulusMemory._calc_angle_dist_to_fish(fish_angle, fish_distance, stim_angle, stim_distance))
-
-
-# # q1, q1
-# stim_angle = 20
-# stim_distance = 1
-# fish_angle = 40
-# fish_distance = 1
-# print(StimulusMemory._calc_angle_dist_to_fish(fish_angle, fish_distance, stim_angle, stim_distance))
-# # q2, q1
-# stim_angle = 120
-# stim_distance = 2
-# fish_angle = 40
-# fish_distance = 1
-# print(StimulusMemory._calc_angle_dist_to_fish(fish_angle, fish_distance, stim_angle, stim_distance))
-# # q3, q1
-# stim_angle = 200
-# stim_distance = 2
-# fish_angle = 40
-# fish_distance = 1
-# print(StimulusMemory._calc_angle_dist_to_fish(fish_angle, fish_distance, stim_angle, stim_distance))
-# # q4, q1
-# stim_angle = 290
-# stim_distance = 2
-# fish_angle = 40
-# fish_distance = 1
-# print(StimulusMemory._calc_angle_dist_to_fish(fish_angle, fish_distance, stim_angle, stim_distance))
-# # q1, q2
-# stim_angle = 40
-# stim_distance = 2
-# fish_angle = 110
-# fish_distance = 1
-# print(StimulusMemory._calc_angle_dist_to_fish(fish_angle, fish_distance, stim_angle, stim_distance))
-# # q2, q2
-# stim_angle = 170
-# stim_distance = 2
-# fish_angle = 110
-# fish_distance = 1
-# print(StimulusMemory._calc_angle_dist_to_fish(fish_angle, fish_distance, stim_angle, stim_distance))
-# # q3, q2
-# stim_angle = 250
-# stim_distance = 2
-# fish_angle = 110
-# fish_distance = 1
-# print(StimulusMemory._calc_angle_dist_to_fish(fish_angle, fish_distance, stim_angle, stim_distance))
-# # q4, q2
-# stim_angle = 300
-# stim_distance = 2
-# fish_angle = 110
-# fish_distance = 1
-# print(StimulusMemory._calc_angle_dist_to_fish(fish_angle, fish_distance, stim_angle, stim_distance))

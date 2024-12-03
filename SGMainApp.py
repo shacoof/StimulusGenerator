@@ -354,11 +354,21 @@ class App:
                 self.runStimuli()
 
     def runStimuliClosedLoop(self):
-        if self.state != constants.RUN:
-            return
-        if not self.sg.run_stimuli_closed_loop():
-            self.leaveProg("finished all stimuli")
-        self.canvas.after(constants.SLEEP_TIME, self.runStimuliClosedLoop)
+        target_interval = SLEEP_TIME/ 1000  # Target interval in seconds (1 ms)
+        while self.state == constants.RUN:
+            start_time = time.perf_counter()  # Record the start time
+
+            if not self.sg.run_stimuli_closed_loop():
+                self.leaveProg("finished all stimuli")
+                break  # Exit the loop if the function signals completion
+
+            self.canvas.update()  # Keep the UI responsive
+
+            # Busy-wait until the target interval elapses
+            while (time.perf_counter() - start_time) < target_interval:
+                pass
+
+
 
     def runStimuli(self):  # this is main loop of stimulus
         if self.state == constants.PAUSE:

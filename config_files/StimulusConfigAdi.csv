@@ -1,0 +1,2 @@
+Type,startX,startY,endX,endY,repetitions,startShapeRadius,endShapeRadius,delay,duration,useSpacer,spacerDuration,batchNum,useAfterFirstMovement
+Static,90,450,90,450,-1,4,4,5000,5000,FALSE,2000,1,TRUE
