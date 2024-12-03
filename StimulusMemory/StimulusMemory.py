@@ -137,6 +137,8 @@ class StimulusMemory:
                 return "DONE: too small"
             if self.stimulus_obj.status == RUNNING:
                 self.stimulus_obj.move()
+                if self.state == MOVING:
+                    print("moved")
             else:
                 self.stop_stimulus()
                 if self.state == MOVING:
@@ -186,12 +188,12 @@ class StimulusMemory:
             "xType": "degrees"}
         self.stimulus_obj = Stimulus(spacer_struct, self.canvas, self.app, self.stim_id)
 
-    def _init_moving_stimulus(self, new_angle, new_size):
+    def _init_moving_stimulus(self, new_angle, new_size, old_angle, old_size):
         current_y = self.startY
         stimulus_struct = {
-            "exitCriteria": "Time", "startX": str(round(self.current_angle)), "startY": str(round(current_y)), "endX": str(round(new_angle)),
+            "exitCriteria": "Time", "startX": str(round(old_angle)), "startY": str(round(current_y)), "endX": str(round(new_angle)),
             "endY": str(round(current_y)),
-            "repetitions": '1', "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": str(round(self.current_size)),
+            "repetitions": '1', "fastSpeed": '0', "slowSpeed": '0', "startShapeRadius": str(round(old_size)),
             "endShapeRadius": str(round(new_size)),
             "fastDuration": '100', "slowDuration": '100', "startMode": "WITH", "delay": '0', "duration": stimuli_moving_time,
             "xType": "degrees"
@@ -280,7 +282,7 @@ class StimulusMemory:
             self.stop_stimulus()
             res = self.calc_new_angle_and_size(moving_angle, moving_dist)
             new_angle, new_size = res
-            self._init_moving_stimulus(new_angle, new_size)
+            self._init_moving_stimulus(new_angle, new_size, self.current_angle, self.current_size)
             self.start_stimulus()
 
     def size_to_dist_from_fish(self, size):
