@@ -1,6 +1,6 @@
 from tkinter.ttk import tkinter
 import threading
-from closed_loop_process.StimuliGeneratorCalib import StimuliGeneratorCalib
+from Stimulus.StimuliGeneratorCalib import StimuliGeneratorCalib
 from closed_loop_process.closed_loop_support import StimuliGeneratorClosedLoop, start_closed_loop_background
 import shutil
 import datetime

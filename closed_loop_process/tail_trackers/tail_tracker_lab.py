@@ -7,6 +7,9 @@ from closed_loop_process.utils_closed_loop import Colors
 import networkx
 
 class LabTailTracker(AbstractTailTracker):
+    '''
+    Same logic as in the fixed fish tracker, too slow for realtime
+    '''
     def __init__(self, image_processor, head_origin):
         super().__init__(image_processor)
         self.head_origin = head_origin

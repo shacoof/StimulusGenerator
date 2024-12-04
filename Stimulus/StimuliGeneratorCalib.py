@@ -6,6 +6,10 @@ import copy
 
 
 class StimuliGeneratorCalib:
+    '''
+    updates the stimulus while calibration is occurring, simply moves the point across the screen at
+    calibration_stimuli_speed (set in closed_loop_config.py file)
+    '''
     def __init__(self, canvas, app):
         self.start_trial_from_left = False
         self.canvas = canvas

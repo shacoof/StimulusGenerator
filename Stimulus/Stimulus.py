@@ -5,9 +5,10 @@ from constants import *
 
 
 class Stimulus:
-
+    """
+    The Basic stimulus representation used in Stimulus Generator classes
+    """
     def __init__(self, stimulus, canvas, app, stimulus_id):
-
         self.stimulusID = stimulus_id
         self.shape = -1
         self.batchNo = EMPTY

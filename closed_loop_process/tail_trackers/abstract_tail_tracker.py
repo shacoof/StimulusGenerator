@@ -1,8 +1,14 @@
 from abc import ABC, abstractmethod
 
-
 class AbstractTailTracker(ABC):
     def __init__(self, image_processor):
+        '''
+        Base class for tail tracking, all child classes must return the tail detection np.array of the tail point in
+        pixels and the tail angles when implementing the abstract tail_tracking method
+        Args:
+            image_processor: image processor that preforms the preprocessing of the current raw frame to create a
+            manipulated frame to do the tail fracking on
+        '''
         self.image_processor = image_processor
         self.tail_angles = None
         self.tail_points = None
@@ -20,10 +26,5 @@ class AbstractTailTracker(ABC):
         """
         self.current_frame = raw_frame
 
-
-    def plot_tail(self):
-        """plots the tail detection on the image"""
-        if self.tail_points is None or self.current_frame is None:
-            raise RuntimeError("need to run tail detect first")
 
 

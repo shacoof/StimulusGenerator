@@ -1,10 +1,12 @@
 from closed_loop_process.tail_trackers.abstract_tail_tracker import AbstractTailTracker
 import numpy as np
-
 from config_files.closed_loop_config import number_of_tail_segments
 
 
 class StytraTailTracker(AbstractTailTracker):
+    '''
+    logic from https://portugueslab.com/stytra/ for their tail detection
+    '''
     def __init__(self, image_processor, head_origin, tail_tip):
         super().__init__(image_processor)
         self.head_origin = head_origin
@@ -120,10 +122,9 @@ class StytraTailTracker(AbstractTailTracker):
             size of the window to estimate next tail point
         next_point_dist :
             distance to the next tail point
-        halfwin :
+        halfwin : half of the moving window size in pixels
 
-
-        Returns
+        Returns the newly acquired point in the tail, and the tails trajectory
         -------
 
         """

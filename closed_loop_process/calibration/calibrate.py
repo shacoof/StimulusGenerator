@@ -19,17 +19,15 @@ class Calibrator:
     def __init__(self, live_camera = True, images_path = None,
                 start_frame = 0, end_frame = number_of_frames_calibration, calib_frame_ranges = None):
         """
+        This class is responsible for the calibration process that acquires frames to calculate the mean and min image
+        use for later processing of each frame in the closed loop class. It also asks the user to choose the head origin,
+        dest and tail tip. It initiates the classes pca_and_predict, image_processor, bout_recognizer, tail_tracker
+        based on the relevant data acquired during calibration
         Args:
             live_camera: use live camera - in this case the FLIR camera needs to be connected
             images_path: for running on recorded data (this is the raw data path)
-            plot_bout_detector: for debugging the bout detector
-            start_frame: for running on pre-recorded data, start frame used for calib - either provide start and end frame or
-            provide calib_frame_ranges
             end_frame: for running on pre-recorded data, end frame used for calib
             calib_frame_ranges: example [[30,80],[122, 300], [507, 600]] ranges of frames to use for calibration
-            use_stytra_tracking: tail detection techniques (stytra is faster and more precise and therefore archives the
-            required frame rate)
-            fr_500: if true then the frame rate is 500 or else it is 166
         """
         self.live_camera = live_camera
         self.mean_frame = None

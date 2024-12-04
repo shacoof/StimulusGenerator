@@ -4,6 +4,9 @@ import time
 
 
 class SpinnakerCamera:
+    '''
+    Api for working with the Spinnaker Camera - used in calibration stage to acquire images
+    '''
     def __init__(self):
         # Initialize the system and retrieve cameras
         self.system = PySpin.System.GetInstance()

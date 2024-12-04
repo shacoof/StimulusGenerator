@@ -1,7 +1,6 @@
 import logging
-import time
 from multiprocessing import queues
-from StimulusMemory.StimulusMemory import StimulusMemory
+from Stimulus.StimulusMemory import StimulusMemory
 from closed_loop_process.print_time import reset_time, print_time, print_statistics, start_time_logger
 from config_files.closed_loop_config import *
 from closed_loop_process.main_closed_loop import ClosedLoop
@@ -13,6 +12,12 @@ from utils.utils import loadCSV
 
 
 class StimuliGeneratorClosedLoop:
+    """
+    This class read the stimuli scenario from the STIMULUS_CONFIG file and manages the stimuli for closed-loop
+    experiment while receiving fish movements predictions through the closed_loop_pred_queue and updating the scenery
+    accordingly. It is also responsible for sending synchronization signals to the NiDaq and writing to the stimuli_log.csv
+    """
+
     def __init__(self, canvas, app, closed_loop_pred_queue=None, output_device=None):
         self.closed_loop_pred_queue = closed_loop_pred_queue
         self.output_device = output_device
@@ -34,10 +39,10 @@ class StimuliGeneratorClosedLoop:
         self.spacer = self.init_spacer()
         self.finished_all_reps = False
         self.stimuli_log = pd.DataFrame(
-            columns=['Pulse ID','Batch Number', 'TS', 'Event Type', 'End/Start','Reason', 'Stimulus ID', 'Stimulus Status', 'Predicted Angle',
+            columns=['Pulse ID', 'Batch Number', 'TS', 'Event Type', 'End/Start', 'Reason', 'Stimulus ID',
+                     'Stimulus Status', 'Predicted Angle',
                      'Predicted Distance',
                      'Current Angle', 'Current Size'])
-
 
     def init_spacer(self):
         spacer_struct = {
@@ -74,14 +79,12 @@ class StimuliGeneratorClosedLoop:
             self.stim_id += 1
             batch_num = int(st["batchNum"])
             if batch_num in self.batches:
-                self.batches[batch_num].append(StimulusMemory(self.canvas, self.app, st,self.stim_id,self))
+                self.batches[batch_num].append(StimulusMemory(self.canvas, self.app, st, self.stim_id, self))
             else:
-                self.batches[batch_num] = [StimulusMemory(self.canvas, self.app, st, self.stim_id,self)]
+                self.batches[batch_num] = [StimulusMemory(self.canvas, self.app, st, self.stim_id, self)]
 
     def save_csv(self, path):
         self.stimuli_log.to_csv(path + '\stimuli_log.csv', index=False)
-
-
 
     def send_pulse_and_write_log(self, event_type, start_end, predicted_angle, predicted_distance, reason):
         """Send a pulse if required for the current stimulus."""
@@ -121,7 +124,7 @@ class StimuliGeneratorClosedLoop:
             if res == "moving stop":
                 moving_stop = True
         if moving_stop:
-            self.send_pulse_and_write_log("movement", "end", "NA", "NA","NA")
+            self.send_pulse_and_write_log("movement", "end", "NA", "NA", "NA")
         if self.number_of_done_stimulus >= self.number_of_stimuli_in_batch:
             self.end_of_batch("all stimulus out of range")
 
@@ -130,7 +133,6 @@ class StimuliGeneratorClosedLoop:
             if stim.state != "inactive":
                 return False
         return True
-
 
     def run_stimuli_closed_loop(self):
         if self.finished_all_reps:
@@ -147,7 +149,7 @@ class StimuliGeneratorClosedLoop:
             # Check if there is a new movement from the queue
             if self.closed_loop_pred_queue and not self.closed_loop_pred_queue.empty():
                 angle, distance = self.closed_loop_pred_queue.get()
-                self.send_pulse_and_write_log("movement", "start", angle, distance,"NA")
+                self.send_pulse_and_write_log("movement", "start", angle, distance, "NA")
                 if self.all_stimuli_inactive():
                     return True
                 for stimulus in self.batchStimulusObjList:
@@ -165,6 +167,23 @@ def empty_queue(queue):
 
 def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_recognizer, tail_tracker, image_processor,
                                  queue_predictions):
+    """
+    This function runs the closed loop process by calling the closed_loop_class with new image frames to process.
+    In turn the closed_loop_class.process_frame function updates the queue_predictions multiprocess queue with new
+    movement and their angle and distance predictions when they occur
+    Args:
+        queue_writer: images queue, read by camera process
+        state: state of the program and multiprocessing flag, it turns 0 when the program is terminated per user request
+        or when all stimuli finished
+        pca_and_predict: The class that predicts the distance and angle - initiated in calibration stage
+        bout_recognizer: The class that recognizes the start of a bout - initiated in calibration stage
+        tail_tracker: The class that extracts the tail points and angles per frame - initiated in calibration stage
+        image_processor: The class that preprocess the image before tail tracking and updates the min and mean
+        frame - initiated in calibration stage
+        queue_predictions: a multiprocess queue for communicating the predicted angle and distance for new movements
+    Returns:
+
+    """
     import psutil
     j = 0
     p = psutil.Process()  # Get current process
@@ -178,7 +197,7 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
         reset_time()
         images_queue_size = queue_writer.qsize()
         if images_queue_size > 1:
-            #print(f"Warning: images queue size is of size {images_queue_size}")
+            print(f"Warning: images queue size is of size {images_queue_size}")
             pass
 
         print_time('before queue')
@@ -192,7 +211,6 @@ def start_closed_loop_background(queue_writer, state, pca_and_predict, bout_reco
             closed_loop_class.process_frame(image_result)  # Process the frame
             print_time('after process')
         j += 1
-
     print_statistics()
     closed_loop_class.process_frame(None)
     logging.info("Closed loop background finished")

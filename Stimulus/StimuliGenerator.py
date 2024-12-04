@@ -5,7 +5,10 @@ from constants import *
 
 
 class StimulusGenerator:
-
+    '''
+    Stimuli generator used in old non-closed loop experiments. Is used when running with appConfig use_closed_loop set
+    to false and with the old structure for the StimulusConfig.csv file
+    '''
     def __init__(self, canvas, app, output_device=None, queue=None):
         self.queue = queue
         self.output_device = output_device

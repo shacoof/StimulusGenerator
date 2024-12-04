@@ -1,6 +1,5 @@
 import pandas as pd
 from datetime import datetime
-import numpy as np
 
 # Convert timestamp strings to datetime objects for easy comparison
 def parse_timestamp(ts):

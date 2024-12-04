@@ -3,13 +3,16 @@ import scipy.io
 import numpy as np
 
 class PCA166Hz(AbstractPCA):
+    """
+    Prediction matrices for angle and distance calculated on 12 first frames of bout in 166 Hz
+    """
     def __init__(self):
         super().__init__()
         self.prediction_matrix_angle = \
-        scipy.io.loadmat("\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")[
+        scipy.io.loadmat("closed_loop_process/prediction_mats/B_matrices_slow_imri.mat")[
             'angle_solution']
         self.prediction_matrix_distance = \
-        scipy.io.loadmat("\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\B_matrices_slow_imri.mat")[
+        scipy.io.loadmat("closed_loop_process/prediction_mats/B_matrices_slow_imri.mat")[
             'distance_solution']
         self.number_of_frames_for_predict = 12
 

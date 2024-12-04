@@ -4,13 +4,16 @@ import numpy as np
 
 
 class PCA500Hz(AbstractPCA):
+    """
+        Prediction matrices for angle and distance calculated on 35 first frames of bout in 500 Hz
+    """
     def __init__(self):
         super().__init__()
         self.prediction_matrix_angle = scipy.io.loadmat(
-            "\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")[
+            "closed_loop_process/prediction_mats/movement_train_intermediate.mat")[
             'angle_solution']
         self.prediction_matrix_distance = scipy.io.loadmat(
-            "\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\movement_train_intermediate.mat")[
+            "closed_loop_process/prediction_mats/movement_train_intermediate.mat")[
             'distance_solution']
         self.number_of_frames_for_predict = 35
 

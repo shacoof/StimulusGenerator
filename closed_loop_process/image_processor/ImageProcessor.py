@@ -1,18 +1,23 @@
-import time
-
 import numpy as np
 import cv2
 from PIL import Image, ImageDraw, ImageFont
 from camera.Flir_camera import SpinnakerCamera
-
 from config_files.preprocess_config import *
 
 
 class ImageProcessor:
+    '''
+    In this class there are various ways to load the images, either using paths to the directory of images,
+    or loading directly from the spinnaker camera, or using load_mat to load a matrice. The class update the min mean
+    frame and update_min_mean_frame should be called for every frame acquired. In preprocess_binary it calculates the
+    binary image used for our tail tracking algo, and the subtracted image that we use for the stytra tracking
+    '''
     def __init__(self, is_live_camera=False, camera:SpinnakerCamera = None):
         """
-        Initialize the ImageProcessor with the path to an image file.
-        :param image_path: str, path to the image file
+        Initialize the ImageProcessor
+        :param is_live_camera: bool, this is set to false because the frames come from the queue and are loaded to the
+        ImageProcessor as matrices
+        :param is_live_camera: SpinnakerCamera, also set to None because the images are loaded with load_mat
         """
         self.image_path = None
         self.image_matrix = None

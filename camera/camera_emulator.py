@@ -2,12 +2,21 @@ import os
 import numpy as np
 from PIL import Image
 import time
+from config_files.closed_loop_config import camera_frame_rate
 
-from closed_loop_process.print_time import print_statistics, start_time_logger, reset_time, print_time
-
-frame_time = 0.010
 
 def camera_emulator_function(queue_reader, queue_writer, images_queue):
+    '''
+    Allows running the closed loop without having a camera and instead injecting in a loop frames from a prerecorded
+    scenario. created for dev purposes. To use, make sure to set camera_emulator_on = True in the closed_loop_config.py,
+    and set emulator_with_camera = False
+    Args:
+        queue_reader: Not used
+        queue_writer: puts images here to be saved to output dir
+        images_queue: puts the sames images here to be processed by the closed loop algo
+    Returns:
+    '''
+    frame_time = 1 / camera_frame_rate
     start_frame = 197751
     end_frame = 198450
     all_frame_mats = []
@@ -25,29 +34,16 @@ def camera_emulator_function(queue_reader, queue_writer, images_queue):
     i = 0
     number_of_frames = len(all_frame_mats)
     init_time = time.perf_counter()
-    print('EMULATOR: STARTING')
-    start_time_logger('EMULATOR')
-    total_time = None
 
     while True:
-        reset_time()
-        start_time = time.perf_counter()
-        print('EMULATOR: Frame time: ', total_time, flush=True)
         index = i % number_of_frames
         image = all_frame_mats[index]
         queue_writer.put_nowait((i, image))
         images_queue.put_nowait((i, image))
-
         next_time = init_time + (i + 1) * frame_time
-        delay = next_time - time.perf_counter()
-        print('EMULATOR: Delay: ', delay, flush=True)
-
         while time.perf_counter() < next_time:
             pass
         i += 1
-        total_time = time.perf_counter() - start_time
-        print_time('end of emulation cycle')
 
 
-    print('EMULATOR: end')
-    print_statistics()
+

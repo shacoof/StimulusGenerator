@@ -7,8 +7,8 @@ from scipy.linalg import svd
 
 class AbstractPCA(ABC):
     def __init__(self):
-        self.V = scipy.io.loadmat('\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\V.mat')['V']
-        self.S = scipy.io.loadmat('\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\S.mat')['S']
+        self.V = scipy.io.loadmat("closed_loop_process/prediction_mats/V.mat")['V']
+        self.S = scipy.io.loadmat("closed_loop_process/prediction_mats/S.mat")['S']
         self.prediction_matrix_angle = None
         self.prediction_matrix_distance = None
         self.number_of_frames_for_predict = None
@@ -42,9 +42,9 @@ class AbstractPCA(ABC):
     def reduce_dimensionality_and_predict(self, theta_mat, to_plot):
         """
         Args:
-            theta_mat: a number_of_frames_for_predict x 98 matrix of tail angles (not normalized) for prediction
+        theta_mat: a number_of_frames_for_predict x 98 matrix of tail angles (not normalized) for prediction
+        to_plot: if true, plots the tail in time as a linear function of the 3 PCs and the coefficients
         Returns: predicted angle, distance
-
         """
         if theta_mat.shape[0] < self.number_of_frames_for_predict:
             raise RuntimeError(f"need {self.number_of_frames_for_predict} frames to predict")
@@ -142,16 +142,17 @@ class AbstractPCA(ABC):
     def calc_3_PCA(self, calibration_theta_matrix: np.array, plot_PC) -> None:
         """
         Updates U to be the 98x3 matrix whose columns are the PCs of the calibration data
-        :param calibration_data: numpy array of dimensions mx105x2 where m is the number of frames used in calibration and
+        :param calibration_theta_matrix: numpy array of dimensions mx105x2 where m is the number of frames used in calibration and
          105 is the number of tail points
+        :param plot_PC: is true, plots the PCs of the tail movements in the calibration_theta_matrix
         :return: None
         """
         self.calibration_theta_matrix = calibration_theta_matrix
         self.get_svd()
         if plot_PC:
             # imris
-            V = scipy.io.loadmat('\\\ems.elsc.huji.ac.il\\avitan-lab\Lab-Shared\Data\ClosedLoop\V.mat')['V']
-            AbstractPCA.plot_PCs("adis_PCs", self.V)
+            V = scipy.io.loadmat('closed_loop_process/prediction_mats/V.mat')['V']
+            AbstractPCA.plot_PCs("new_PCs", self.V)
             AbstractPCA.plot_PCs("imris_PCs", V)
 
     # not in use because we use predefined PCAs

@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 
 class PointSelector:
+    """
+    Interactive gui for selecting the head origin, head dest, and tail tip during calibration
+    """
     def __init__(self, image_array):
         self.image_array = image_array
         self.points = []  # To store the selected points

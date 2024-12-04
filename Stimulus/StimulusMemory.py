@@ -16,9 +16,30 @@ STATIC = "static"
 
 
 class StimulusMemory:
+    """
+    A single stimulus representation for closed loop scenarios. Each line from the StimulusConfig.csv is represented
+    in this class and switches between different states depending on their initial configuration and the fish's movement.
+    For information on how to configure StimulusConfig.csv for closed loop settings refer to the readme
+
+    The different states and their meaning:
+    (all stimuli are classifies in the StimulusConfig as dynamic or static and this effects how they transition
+    between states)
+
+    MOVING: the stimuli is now moving in response to the fish's movement
+    PRESENTED: the stimuli is presented in the virtual screen (it is in the range of 15 165 degrees)
+    INACTIVE: it has not yet been displayed because it's onset time, defined by the DELAY field of the StimulusConfig
+    has not been reached yet
+    OOR: only relevant to a static stimulus, if it is OOR because of the fish's movement it can return to be PRESENTED
+    if the fish moves in its direction
+    SPACER: both dynamic and static stiumlus can be i spacer mode (not appear on screen and not updated when there is
+    a movement) if in the StimulusConfig we defined useSpacer TRUE, then between repetitions the stimuli will not appear
+    DONE: a stimuli transitions to done state if it has finished all its repetitions, or if it is dynamic and out of
+    range, or if it is too big (then we end this batch) or too small.
+
+    note - if all stimuli are out of the fish's field of view we also terminate the batch
+    """
     def __init__(self, canvas, app, stimulus_struct, stim_id, stimuliGenerator):
-        """
-        """
+
         self.type = stimulus_struct["Type"].lower()
         self.startX = int(stimulus_struct["startX"])
         self.startY = int(stimulus_struct["startY"])
@@ -94,6 +115,21 @@ class StimulusMemory:
 
     @staticmethod
     def _calc_angle_dist_to_fish(fish_angle, fish_distance, stim_angle, stim_distance):
+        """
+        calculates this stimuli's new angle and size according to the fish's movement. Before the movement the fish is
+        thought of as at (0,0) coordinates of a 2D plate, and the stimuli is thought of as at some location in the same
+        2D plate depending on it's size and angle. To calculate the new stimuli size, after every movement we think of
+        the fish's new location as the new origin and calculate the stimuli's new size and angle in reference to this
+        new origin
+        Args:
+            fish_angle: predicted fish angle (-90 to 90)
+            fish_distance: predicted fish distance im mm
+            stim_angle: current stim angle in virtual screen (0 to 360) where (15 to 165 is actually displayed)
+            stim_distance: stim distance from fish in mm (proportional to stimuli radius)
+
+        Returns:
+        new stimuli angle and new stimuli distance
+        """
         fish_angle = 90 + fish_angle
         fish_x, fish_y = polar_to_cartesian(fish_angle, fish_distance)
         # angle
