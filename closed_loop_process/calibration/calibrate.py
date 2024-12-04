@@ -1,10 +1,7 @@
-import time
-
 from closed_loop_process.PCA_and_predict.PCA_166_Hz import PCA166Hz
 from closed_loop_process.PCA_and_predict.PCA_500_Hz import PCA500Hz
 from closed_loop_process.tail_trackers.tail_tracker_lab import LabTailTracker
 from closed_loop_process.tail_trackers.tail_tracker_stytra import StytraTailTracker
-
 from config_files.preprocess_config import *
 from closed_loop_process.calibration.point_selector import PointSelector
 from closed_loop_process.image_processor.ImageProcessor import ImageProcessor
@@ -26,11 +23,12 @@ class Calibrator:
             live_camera: use live camera - in this case the FLIR camera needs to be connected
             images_path: for running on recorded data (this is the raw data path)
             plot_bout_detector: for debugging the bout detector
-            start_frame: for running on recorded data start frame used in calib - either provide start and end frame or
-             provide calib_frame_ranges
-            end_frame: for running on recorded data start frame used in calib
+            start_frame: for running on pre-recorded data, start frame used for calib - either provide start and end frame or
+            provide calib_frame_ranges
+            end_frame: for running on pre-recorded data, end frame used for calib
             calib_frame_ranges: example [[30,80],[122, 300], [507, 600]] ranges of frames to use for calibration
-            use_stytra_tracking: tail detection techniques
+            use_stytra_tracking: tail detection techniques (stytra is faster and more precise and therefore archives the
+            required frame rate)
             fr_500: if true then the frame rate is 500 or else it is 166
         """
         self.live_camera = live_camera
