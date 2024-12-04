@@ -74,9 +74,9 @@ class StimuliGeneratorClosedLoop:
             self.stim_id += 1
             batch_num = int(st["batchNum"])
             if batch_num in self.batches:
-                self.batches[batch_num].append(StimulusMemory(self.canvas, self.app, st,self.stim_id,))
+                self.batches[batch_num].append(StimulusMemory(self.canvas, self.app, st,self.stim_id,self))
             else:
-                self.batches[batch_num] = [StimulusMemory(self.canvas, self.app, st, self.stim_id,)]
+                self.batches[batch_num] = [StimulusMemory(self.canvas, self.app, st, self.stim_id,self)]
 
     def save_csv(self, path):
         self.stimuli_log.to_csv(path + '\stimuli_log.csv', index=False)
@@ -143,9 +143,7 @@ class StimuliGeneratorClosedLoop:
                 self.spacer.terminate_run()
                 self.send_pulse_and_write_log("trial", "start", "NA", "NA", "NA")
         else:
-            start_time = time.time()
             self.run_stimulus()
-            #(f"time to run stimulus {time.time() - start_time}")
             # Check if there is a new movement from the queue
             if self.closed_loop_pred_queue and not self.closed_loop_pred_queue.empty():
                 angle, distance = self.closed_loop_pred_queue.get()

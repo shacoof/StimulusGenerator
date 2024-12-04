@@ -16,7 +16,7 @@ STATIC = "static"
 
 
 class StimulusMemory:
-    def __init__(self, canvas, app, stimulus_struct, stim_id):
+    def __init__(self, canvas, app, stimulus_struct, stim_id, stimuliGenerator):
         """
         """
         self.type = stimulus_struct["Type"].lower()
@@ -36,6 +36,7 @@ class StimulusMemory:
         self.spacerDuration = int(stimulus_struct["spacerDuration"])
         self.original_struct = stimulus_struct
         self.canvas = canvas
+        self.stimuliGenerator = stimuliGenerator
         if self.startX <= self.endX:
             self.direction_left_to_right = False
         else:
@@ -124,7 +125,7 @@ class StimulusMemory:
                 if self.type == DYNAMIC:
                     self.state = DONE
                     self.stop_stimulus()
-                    #self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "end", "NA", "NA", "out of angle range")
+                    self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "end", "NA", "NA", "out of angle range")
                 else:
                     self.state = OOR
                 return "DONE: out of range"
@@ -145,9 +146,8 @@ class StimulusMemory:
                     self._init_after_moving_stimulus()
                     return_str =  "moving stop"
                 elif self.state == PRESENTED and (not self.first_movement_occurred or self.useAfterFirstMovement):
-
-                    # self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "end", "NA",
-                    #                                                "NA", f"finished rep {self.rep}")
+                    self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "end", "NA",
+                                                                   "NA", f"finished rep {self.rep}")
                     self.rep += 1
                     if self.rep <= self.repetitions:
                         # either go to spacer or to symmetric stimuli
@@ -159,24 +159,24 @@ class StimulusMemory:
                                 self._init_static_stimulus()
                             else:
                                 self._init_symmetric_stimulus()
-                            # self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",
-                            # "NA", f"starting rep {self.rep}")
+                            self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",
+                            "NA", f"starting rep {self.rep}")
                     else:
                         print("finished w dynamic stim")
                         self.state = DONE
                         return "DONE: finished all reps"
 
                 elif self.state == SPACER:
-                    # self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",
-                    #                                                "NA", f"starting rep {self.rep}")
+                    self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",
+                                                                   "NA", f"starting rep {self.rep}")
                     self.state = PRESENTED
                     self._init_symmetric_stimulus()
                 self.start_stimulus()
         else:
             if not self.first_movement_occurred or self.useAfterFirstMovement:
                 if self.delay <= self.time_ms and self.repetitions > 0:
-                    # self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",
-                    #                                                "NA", f"starting rep {self.rep}")
+                    self.stimuliGenerator.send_pulse_and_write_log(f"stimuli {self.stim_id}", "start", "NA",
+                                                                   "NA", f"starting rep {self.rep}")
                     self._init_stimulus()
                     self.state = PRESENTED
                     self.start_stimulus()
