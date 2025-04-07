@@ -36,7 +36,7 @@ from NiDaqPulse import NiDaqPulse
 # see NUM_IMAGES
 # each item is [timestamp, frame-number, stimulus-message ]
 image_array = [['timestamp', 'image no', 'stimulus']]
-global queue_reader, queue_writer, writer_process
+global queue_reader, queue_writer, writer_process, image_renderer
 global file_prefix, data_path, camera_output_device
 
 
@@ -228,7 +228,7 @@ def print_device_info(nodemap):
 
 
 def acquire_images(cam, nodemap):
-    global queue_reader, queue_writer
+    global queue_reader, queue_writer, image_renderer
     global file_prefix
     """
     This function acquires 30 images from a device, stores them in a list, and returns the list.
@@ -307,7 +307,10 @@ def acquire_images(cam, nodemap):
                             image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), i, msg])
 
                     # note that I already acquire the image, so even if exit sent I still have 1 image in the buffer
-                    queue_writer.put((i, image_result.GetNDArray()))
+                    image_np = image_result.GetNDArray()
+                    image_renderer.process_frame(image_np)
+                    queue_writer.put((i, image_np))
+
                     image_result.Release()
                     i += 1
 
@@ -437,7 +440,10 @@ def main():
 
 
 def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in):
-    global queue_reader, queue_writer, file_prefix, data_path, writer_process, camera_output_device
+    global queue_reader, queue_writer, file_prefix, data_path, writer_process, camera_output_device, image_renderer
+    from image_renderer.image_renderer import ImageRenderer
+    image_renderer_g = ImageRenderer()
+    image_renderer = image_renderer_g
     camera_output_device = NiDaqPulse(device_name=f"Dev2/port1/line6")
     data_path = path_in
     file_prefix = file_prefix_in
