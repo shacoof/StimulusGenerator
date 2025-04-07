@@ -439,10 +439,10 @@ def main():
     return result
 
 
-def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in):
+def camera_control_worker(queue_reader_in, queue_writer_in, path_in, file_prefix_in, render_image):
     global queue_reader, queue_writer, file_prefix, data_path, writer_process, camera_output_device, image_renderer
     from image_renderer.image_renderer import ImageRenderer
-    image_renderer_g = ImageRenderer()
+    image_renderer_g = ImageRenderer(render_image)
     image_renderer = image_renderer_g
     camera_output_device = NiDaqPulse(device_name=f"Dev2/port1/line6")
     data_path = path_in

@@ -71,8 +71,8 @@ class App:
         self.camera_control = self.getAppConfig("cameraControl", "str")
         self.data_path = self.getAppConfig("data_path", "str")
         self.image_file_type = self.getAppConfig("image_file_type", "str")
-
-        self.split_rate = self.getAppConfig("split_rate")
+        self.render_image = self.getAppConfig("RenderFish") == '1'
+        self.split_rate = self.getAppConfig("split_rate",str)
         self.run_start_time = None
 
         self.deltaX = 0
@@ -166,7 +166,7 @@ class App:
                                               target=image_reader_worker.camera_control_worker,
                                               args=(
                                                   self.queue_reader, self.queue_writer, self.data_path,
-                                                  self.file_prefix))
+                                                  self.file_prefix, self.render_image))
         self.writer_process1 = multiprocessing.Process(name='image_writer_worker1',
                                                        target=image_writer_worker.image_writer_worker,
                                                        args=(self.queue_writer, self.data_path, self.image_file_type))
