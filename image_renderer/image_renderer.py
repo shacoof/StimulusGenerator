@@ -38,7 +38,7 @@ class ImageRenderer:
         """
         Image renderer class, creates a process to render images im real time
         """
-
+        self.frame_rate = 25 #Hz
         self.current_frame = 0
         self.shared_data = multiprocessing.Manager().dict()
         self.lock = multiprocessing.Lock()
@@ -76,5 +76,6 @@ class ImageRenderer:
             if frame is None:
                 self.stop_plotting()
                 return
-            self.update_shared_data(frame)
-            self.current_frame += 1
+            if self.current_frame % self.frame_rate == 0:
+                self.update_shared_data(frame)
+                self.current_frame += 1

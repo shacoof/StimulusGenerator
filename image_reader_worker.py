@@ -302,6 +302,7 @@ def acquire_images(cam, nodemap):
                             queue_writer.put((-1, (width, height, file_prefix)))
                             queue_writer.put((-1, (width, height, file_prefix)))
                             queue_writer.put((-1, (width, height, file_prefix)))
+                            image_renderer.process_frame(None)
                             print(f"process camera_control_worker is done ")
                         else:
                             image_array.append([datetime.datetime.now().strftime("%H:%M:%S:%f"), i, msg])
