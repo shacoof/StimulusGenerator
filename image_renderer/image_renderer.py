@@ -34,7 +34,7 @@ def plot_worker(shared_data, lock):
 
 
 class ImageRenderer:
-    def __init__(self):
+    def __init__(self, render_image):
         """
         Image renderer class, creates a process to render images im real time
         """
@@ -45,11 +45,11 @@ class ImageRenderer:
         self.plot_process = multiprocessing.Process(target=plot_worker, args=(self.shared_data, self.lock))
         self.shared_data["image"] = np.zeros((100, 100))
         self.shared_data["frame_number"] = 0
-
-        #TODO add flag
-        self.plot_process.start()
-        process5_psutil = psutil.Process(self.plot_process.pid)
-        process5_psutil.cpu_affinity([5])
+        self.render_image = render_image
+        if render_image:
+            self.plot_process.start()
+            process5_psutil = psutil.Process(self.plot_process.pid)
+            process5_psutil.cpu_affinity([5])
 
     def update_shared_data(self, image):
         """
@@ -72,8 +72,9 @@ class ImageRenderer:
             frame: a np.array 2D matrice of the camera acquired image
         Returns:
         """
-        if frame is None:
-            # TODO add flag here
-            self.stop_plotting()
-            return
-        self.update_shared_data(frame)
+        if self.render_image:
+            if frame is None:
+                self.stop_plotting()
+                return
+            self.update_shared_data(frame)
+            self.current_frame += 1
