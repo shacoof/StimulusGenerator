@@ -71,22 +71,25 @@ def create_directory(dir_name):
 
 def opencv_create_video(file_prefix, height, width, data_path, image_file_type):
     i = 0
-    frame_rate = 30
+    frame_rate = 167
     out = cv2.VideoWriter(f'{data_path}\\{file_prefix}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), frame_rate,
                           (width, height))
 
     print("create video in progress")
     font = cv2.FONT_HERSHEY_SIMPLEX
     for filename in glob.glob(f'{data_path}\\*.{image_file_type}'):
-        print(filename)
-        img = cv2.imread(filename)
-        text = f'frame={i}'
-        cv2.putText(img, text, (1, 50), font, 0.5, (255, 255, 0), 2)
-        out.write(img)
-        # os.remove(filename)
-        i = i + 1
-        if i % 1000 == 0:
-            print(f'{i} images processed')
+        if i < 200000:
+            print(filename)
+            img = cv2.imread(filename)
+            # text = f'frame={i}'
+            # cv2.putText(img, text, (1, 50), font, 0.5, (255, 255, 0), 2)
+            if i % 10 == 0:
+                out.write(img)
+                print(i)
+            # os.remove(filename)
+            i = i + 1
+            if i % 1000 == 0:
+                print(f'{i} images processed')
 
     out.release()
     print("video is completed")
