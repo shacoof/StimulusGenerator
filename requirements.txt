@@ -6,3 +6,4 @@ keyboard==0.13.5
 matplotlib==3.5.1
 progress==1.6
 opencv-python==4.5.5.64
+psutils==7.0.0
