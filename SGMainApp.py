@@ -72,10 +72,10 @@ class App:
         self.data_path = self.getAppConfig("data_path", "str")
         self.image_file_type = self.getAppConfig("image_file_type", "str")
         try:
-            self.render_image = self.getAppConfig("RenderFish") == '1'
+            self.render_image = self.getAppConfig("RenderFish", str) == '1'
         except KeyError:
             self.render_image = True
-        self.split_rate = self.getAppConfig("split_rate",str)
+        self.split_rate = self.getAppConfig("split_rate", str)
         self.run_start_time = None
 
         self.deltaX = 0
